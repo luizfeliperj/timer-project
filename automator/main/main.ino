@@ -12,7 +12,6 @@ struct {
 } cacheEhHorarioDeVerao;
 
 /* DEBUG FLAGS */
-/* #define SET_RTCTIME */
 #define ENABLE_DEBUG /* */
 
 #define PIN_LED            2
@@ -79,17 +78,6 @@ void setup() {
     Serial.setTimeout(SERIALTIMEOUT);
   }
 
-  #ifdef SET_RTCTIME
-  time_t t = 1476064740UL;
-  setDS3231time(second(t), minute(t), hour(t), 0, day(t), month(t), year(t) - 2000);
-
-  // setDS3231time(0,59,23,7,18,2,17); /* Teste do fim do horario de verao */
-  // setDS3231time(0,59,23,7,15,10,16); /* Teste do inicio do horario de verao */
-  // setDS3231time(0,14,6,4,18,1,16); /* Teste de pressionar o botao de ligar no horario de verao */
-  // setDS3231time(0,14,21,4,18,8,16); /* Teste de pressionar o botao de ligar e depois de 10 segundos desligar */
-  // setDS3231time(0,35,16,4,18,8,16);
-  #endif // SET_RTCTIME
-  
   digitalWrite (PIN_RELAY1, HIGH);
   pinMode( PIN_RELAY1, OUTPUT );
 
