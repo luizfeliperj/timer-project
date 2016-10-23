@@ -29,6 +29,7 @@ class Relay : public DelayRun {
     }
 };
 
+/* Classe que ajusta o timer para terminar sempre em hora cheia */
 class TimerFixer : public DelayRun {
   protected:
     Task *target;
