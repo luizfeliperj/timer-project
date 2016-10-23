@@ -12,7 +12,7 @@ struct {
 } cacheEhHorarioDeVerao;
 
 /* DEBUG FLAGS */
-#define ENABLE_DEBUG /* */
+/* #define ENABLE_DEBUG */
 
 #define PIN_LED            2
 #define PIN_RELAY1         14
