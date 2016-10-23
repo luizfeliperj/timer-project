@@ -76,10 +76,10 @@ void timerlet ( Task *me )
     setDS3231time(second(t), minute(t), hour(t), weekday(t), day(t), month(t), year(t) - Y2KMARKFIX);
   }
 
-  unsigned int needdrift = t % SECONDS_IN_HOUR/2;
+  unsigned int needdrift = t % (TIMESYNCING/1000UL);
   if (needdrift)
   {
-    int period = SECONDS_IN_HOUR/2 - needdrift;
+    int period = (TIMESYNCING/1000UL) - needdrift;
 
     TimerFixer *t = new TimerFixer (period * 1000UL, me);
     t->startDelayed();
@@ -136,10 +136,10 @@ void tasklet ( Task *me )
     }
   }
 
-  unsigned int needdrift = t % SECONDS_IN_MINUTE;
+  unsigned int needdrift = t % (POOLINGTIME/1000UL);
   if (needdrift)
   {
-    int period = SECONDS_IN_MINUTE - needdrift;
+    int period = (POOLINGTIME/1000UL) - needdrift;
 
     TimerFixer *t = new TimerFixer (period * 1000UL, me);
     t->startDelayed();
