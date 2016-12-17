@@ -14,9 +14,11 @@ struct {
 /* DEBUG FLAGS */
 /* #define ENABLE_DEBUG */
 
+#define MODEON             1
+#define MODEOFF            0
 #define PIN_LED            2
-#define PIN_RELAY1         14
-#define PIN_RELAY2         15
+#define PIN_RELAY1         17
+#define PIN_RELAY2         16
 #define MONTHSPERAYEAR     12
 #define MAXSTRINGBUFFER    128
 #define BAUDRATE           9600L

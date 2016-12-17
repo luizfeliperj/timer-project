@@ -1,4 +1,4 @@
-static int lastState = 0;
+static int lastState = MODEOFF;
 static Relay relay1(PRESSBUTTONTIME, PIN_RELAY1);
 static Relay relay2(PRESSBUTTONTIME, PIN_RELAY2);
 BlinkTask led = BlinkTask(PIN_LED, 100, 100, 6);
@@ -10,7 +10,8 @@ void seriallet ( Task *me )
   char buffer[DATETIMESTRINGLEN + 1];
   int ano, mes, dia, hora, minuto, segundo;
 
-  led.start();
+  if (lastState == MODEON)
+    led.start();
 
   if (!Serial)
     return;
