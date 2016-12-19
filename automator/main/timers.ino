@@ -68,7 +68,10 @@ void timerlet ( Task *me )
     setDateFromSource(&t);
 
   if (t != rtc)
-    setDS3231time(second(t), minute(t), hour(t), weekday(t), day(t), month(t), year(t) - Y2KMARKFIX);
+  {
+    t = rtc;
+    setTime(rtc);
+  }
 
   unsigned int needdrift = t % (TIMESYNCING/1000UL);
   if (needdrift)
