@@ -1,4 +1,4 @@
-static int lastState = MODEOFF;
+static int lastState = MODEINVALID;
 static Relay relay1(PRESSBUTTONTIME, PIN_RELAY1);
 static Relay relay2(PRESSBUTTONTIME, PIN_RELAY2);
 BlinkTask led = BlinkTask(PIN_LED, 100, 100, 6);
@@ -67,15 +67,8 @@ void timerlet ( Task *me )
   if (t == 0L)
     setDateFromSource(&t);
 
-  if (t < rtc)
-  {
-    setTime(rtc);
-    t = rtc;
-  }
-  else if (t > rtc)
-  {
+  if (t != rtc)
     setDS3231time(second(t), minute(t), hour(t), weekday(t), day(t), month(t), year(t) - Y2KMARKFIX);
-  }
 
   unsigned int needdrift = t % (TIMESYNCING/1000UL);
   if (needdrift)
@@ -99,6 +92,14 @@ void timerlet ( Task *me )
 void tasklet ( Task *me )
 {
   debug_print(PSTR("Running tasklet()..."));
+
+  if (lastState == MODEINVALID)
+  {
+    debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
+
+    lastState = MODEOFF;
+    return;
+  }
   
   time_t t = now();
   debug_print(PSTR("Now in time_t: %ld"), t);

@@ -16,6 +16,7 @@ struct {
 
 #define MODEON             1
 #define MODEOFF            0
+#define MODEINVALID        -1
 #define PIN_LED            2
 #define PIN_RELAY1         17
 #define PIN_RELAY2         16
