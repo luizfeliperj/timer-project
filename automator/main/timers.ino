@@ -119,15 +119,6 @@ void tasklet ( Task *me )
 {
   debug_print(PSTR("Running tasklet()..."));
 
-  if (lastState == MODEINVALID)
-  {
-    debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
-
-    relayOff.pressButton();
-    lastState = MODEOFF;
-    return;
-  }
-  
   time_t t = now();
   debug_print(PSTR("Now in time_t: %ld"), t);
   
@@ -146,6 +137,18 @@ void tasklet ( Task *me )
   
   const byte Flag = pgm_read_byte (&(timertable[Hour][Minute/TIMERTABLESPLITMIN]));
   debug_print(PSTR("Flag: %d"), Flag);
+  
+  if (lastState == MODEINVALID)
+  {
+    debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
+
+    lastState = MODEOFF;
+
+    if (Flag == MODEOFF)
+      relayOff.pressButton();
+
+    return;
+  }
   
   debug_print(PSTR("lastState: %d"), lastState);
   if (lastState != Flag) {
