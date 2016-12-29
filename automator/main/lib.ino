@@ -25,6 +25,9 @@ class Relay : public DelayRun {
     static boolean Click ( Task* task ) {
       Relay *r = (static_cast<Relay*>(task));
 
+      debug_print(PSTR("Property tries is %d"), r->prop.tries);
+      debug_print(PSTR("Property mode is %d"), r->prop.mode);
+
       switch (r->prop.mode) {
         case MODEON:
           r->turnOn();
@@ -38,7 +41,7 @@ class Relay : public DelayRun {
       }
 
       r->prop.mode = (r->prop.mode + 1) & 0x1;
-
+      
       if (r->prop.tries)
         r->startDelayed();
     }

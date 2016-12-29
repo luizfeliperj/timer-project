@@ -11,9 +11,12 @@ void seriallet ( Task *me )
   int ano, mes, dia, hora, minuto, segundo;
 
   wdt_reset();
-
-  if (lastState == MODEON)
+  debug_print(PSTR("Watchdog reset"));
+  
+  if (lastState == MODEON) {
+    debug_print(PSTR("Mode is on, blink led"));
     led.start();
+  }
 
   if (!Serial)
     return;
@@ -27,17 +30,20 @@ void seriallet ( Task *me )
     case 'D':
       Serial.read();
       debugenabled = (debugenabled + 1) & 0x1;
+      debug_print(PSTR("Toggle debugging [%d]"), debugenabled);
       break;
 #endif /* ENABLE_DEBUG */
 
     case 'O':
       Serial.read();
       relayOn.pressButton();
+      debug_print(PSTR("Force MODEON"));
       return;
 
     case 'F':
       Serial.read();
       relayOff.pressButton();
+      debug_print(PSTR("Force MODEOFF"));
       return;
 
     default:
@@ -144,8 +150,10 @@ void tasklet ( Task *me )
 
     lastState = MODEOFF;
 
-    if (Flag == MODEOFF)
+    if (Flag == MODEOFF) {
+      debug_print(PSTR("Making sure mode is off"));
       relayOff.pressButton();
+    }
 
     return;
   }
