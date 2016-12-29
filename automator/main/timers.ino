@@ -1,7 +1,7 @@
-static int lastState = MODEINVALID;
-static Relay relay1(PRESSBUTTONTIME, PIN_RELAY1);
-static Relay relay2(PRESSBUTTONTIME, PIN_RELAY2);
-BlinkTask led = BlinkTask(PIN_LED, 100, 100, 6);
+static int8_t lastState = MODEINVALID;
+static Relay relayOn(PRESSBUTTONTIME, PIN_RELAY1);
+static Relay relayOff(PRESSBUTTONTIME, PIN_RELAY2);
+static BlinkTask led = BlinkTask(PIN_LED, LEDBLINKINTERVAL, LEDBLINKINTERVAL, LEDBLINKTIMES);
 
 /* Le comandos enviados pela serial regularmente a cada segundo */
 void seriallet ( Task *me )
@@ -10,21 +10,44 @@ void seriallet ( Task *me )
   char buffer[DATETIMESTRINGLEN + 1];
   int ano, mes, dia, hora, minuto, segundo;
 
+  wdt_reset();
+
   if (lastState == MODEON)
     led.start();
 
   if (!Serial)
     return;
 
-  if (Serial.peek() == -1)
+  *buffer = Serial.peek();
+  if (*buffer == -1)
     return;
-    
-  if (Serial.readBytes(buffer, DATETIMESTRINGLEN) != DATETIMESTRINGLEN)
-  {
-    printcurrentdate(t);
-    return;
-  }
 
+  switch (*buffer) {
+#ifdef ENABLE_DEBUG
+    case 'D':
+      Serial.read();
+      debugenabled = (debugenabled + 1) & 0x1;
+      break;
+#endif /* ENABLE_DEBUG */
+
+    case 'O':
+      Serial.read();
+      relayOn.pressButton();
+      return;
+
+    case 'F':
+      Serial.read();
+      relayOff.pressButton();
+      return;
+
+    default:
+        if (Serial.readBytes(buffer, DATETIMESTRINGLEN) != DATETIMESTRINGLEN)
+        {
+          printcurrentdate(t);
+          return;
+        }
+  }
+  
   buffer[DATETIMESTRINGLEN] = 0;
   if ( 6 != sscanf_P(buffer, PSTR("%04d%02d%02d%02d%02d%02d"), &ano, &mes, &dia, &hora, &minuto, &segundo) )
   {
@@ -100,6 +123,7 @@ void tasklet ( Task *me )
   {
     debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
 
+    relayOff.pressButton();
     lastState = MODEOFF;
     return;
   }
@@ -128,11 +152,11 @@ void tasklet ( Task *me )
     lastState = Flag;
     switch (Flag) {
       case 0: // Desligar
-        relay2.pressButton();
+        relayOff.pressButton();
         break;;
 
       case 1: // Ligar
-        relay1.pressButton();
+        relayOn.pressButton();
         break;;
 
       default:

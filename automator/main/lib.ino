@@ -1,7 +1,11 @@
 /* Classe que empacota as operacoes do rele */
 class Relay : public DelayRun {
   protected:
-    int pin;
+    uint8_t pin;
+    struct {
+      uint8_t  mode:1;
+      uint8_t tries:7;
+    } prop;
 
   private:
     boolean turnOn () {
@@ -11,18 +15,42 @@ class Relay : public DelayRun {
       return true;
     }
 
-    static boolean turnOff ( Task* task ) {
-      int pin = (static_cast<Relay*>(task))->pin;
-      debug_print(PSTR("Turning off relay %d"), pin);
+    boolean turnOff () {
+      debug_print(PSTR("Turning off relay %d"), this->pin);
 
-      digitalWrite (pin, HIGH);
+      digitalWrite (this->pin, HIGH);
       return true;
     }
 
+    static boolean Click ( Task* task ) {
+      Relay *r = (static_cast<Relay*>(task));
+
+      switch (r->prop.mode) {
+        case MODEON:
+          r->turnOn();
+          break;;
+        
+        case MODEOFF:
+        default:
+          r->turnOff();
+          r->prop.tries--;
+          break;;
+      }
+
+      r->prop.mode = (r->prop.mode + 1) & 0x1;
+
+      if (r->prop.tries)
+        r->startDelayed();
+    }
+
   public:
-    Relay (unsigned long delayMs, int pin) : DelayRun (delayMs, turnOff) { this->pin = pin; }
+    Relay (unsigned long delayMs, int pin) : DelayRun (delayMs, Click) { this->pin = pin; }
+    
     void pressButton() {
       debug_print(PSTR("pressButton [%d]"), this->pin);
+      
+      this->prop.mode = MODEOFF;
+      this->prop.tries = PRESSBUTTONTRIES;
 
       this->turnOn();
       this->startDelayed();

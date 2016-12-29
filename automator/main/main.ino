@@ -4,6 +4,8 @@
 #include <SoftTimer.h>
 #include <BlinkTask.h>
 #include <DelayRun.h>
+#include <stdint.h>
+#include <avr/wdt.h>
 #include <avr/pgmspace.h>
 
 struct {
@@ -12,7 +14,7 @@ struct {
 } cacheEhHorarioDeVerao;
 
 /* DEBUG FLAGS */
-/* #define ENABLE_DEBUG */
+#define ENABLE_DEBUG MODEON
 
 #define MODEON             1
 #define MODEOFF            0
@@ -26,23 +28,32 @@ struct {
 #define Y2KMARKFIX         2000L
 #define TIMESYNCING        (60 * 60 * 1000L)
 #define POOLINGTIME        (30 * 1000L)
+#define PRESSBUTTONTIME    ( 2 * 1000L)
+#define PRESSBUTTONTRIES   10
 #define SERIALTIMEOUT      100L
 #define SERIALPOOLING      1000L
-#define PRESSBUTTONTIME    ( 2 * 1000L)
+#define LEDBLINKTIMES      3
+#define LEDBLINKINTERVAL   100
 #define PATHSEPARATOR      '/'
-#define SECONDS_IN_MINUTE  60
-#define SECONDS_IN_HOUR    (60 * SECONDS_IN_MINUTE)
 #define TIMERTABLESPLITMIN 5
-#define DATETIMESTRINGLEN  sizeof("YYYYMMDDHHMMSS") - 1
+#define SECONDS_IN_MINUTE  60
 #define DS3231_I2C_ADDRESS 0x68
+#define SECONDS_IN_HOUR    (60 * SECONDS_IN_MINUTE)
+#define DATETIMESTRINGLEN  sizeof("YYYYMMDDHHMMSS") - 1
+
 
 #ifdef ENABLE_DEBUG
+uint8_t debugenabled = ENABLE_DEBUG;
 #define debug_print(fmt, ...) debug_print_hlp(F(__FILE__), __LINE__, fmt, ##__VA_ARGS__);
 template<class T> int debug_print_hlp (const __FlashStringHelper* file, const int line, const T fmt, ...)
 {
   int r;
   va_list args;
   char *lpBuffer, buffer[MAXSTRINGBUFFER];
+
+  if (debugenabled == MODEON) {
+    return 0;
+  }
 
   strcpy_P (buffer, (const char *) file);
   lpBuffer  = strrchr(buffer, PATHSEPARATOR);
@@ -56,7 +67,8 @@ template<class T> int debug_print_hlp (const __FlashStringHelper* file, const in
   lpBuffer += r;
   r += vsnprintf_P(lpBuffer, sizeof(buffer) - strlen(buffer), (const char *) fmt, args);
   va_end(args);
-  /* if (strlen(buffer) <= Serial.availableForWrite()) */ Serial.println(buffer);
+
+  Serial.println(buffer);
 
   return r;
 }
@@ -66,7 +78,10 @@ template<class T> int debug_print_hlp (const __FlashStringHelper* file, const in
 
 void setup() {
   // put your setup code here, to run once:
+  wdt_disable();
+  
   Wire.begin();
+  
 
   cacheEhHorarioDeVerao.fim = 0;
   cacheEhHorarioDeVerao.year = 0;
@@ -95,6 +110,8 @@ void setup() {
 
   /* Terceiro, verifica por pedidos na serial */
   SoftTimer.add (new Task (SERIALPOOLING, seriallet));
+
+  wdt_enable(WDTO_2S);
 
   debug_print(PSTR("End of setup process..."));
 }
