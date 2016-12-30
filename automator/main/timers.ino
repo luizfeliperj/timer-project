@@ -27,23 +27,34 @@ void seriallet ( Task *me )
 
   switch (*buffer) {
 #ifdef ENABLE_DEBUG
+    case 'd':
     case 'D':
       Serial.read();
       debugenabled = (debugenabled + 1) & 0x1;
-      debug_print(PSTR("Toggle debugging [%d]"), debugenabled);
-      break;
+      info_print(PSTR("Toggle debugging [%d]"), debugenabled);
+      return;
 #endif /* ENABLE_DEBUG */
+    
+    case 'a':
+    case 'A':
+      Serial.read();
+      info_print(PSTR("Feito por Luiz Felipe Silva"));
+      info_print(PSTR("Em " __DATE__ " " __TIME__ ));
+      info_print(PSTR("Boot counter: %d"), get_next_count());
+      return;
 
+    case 'o':
     case 'O':
       Serial.read();
       relayOn.pressButton();
-      debug_print(PSTR("Force MODEON"));
+      info_print(PSTR("Force MODEON"));
       return;
 
+    case 'f':
     case 'F':
       Serial.read();
       relayOff.pressButton();
-      debug_print(PSTR("Force MODEOFF"));
+      info_print(PSTR("Force MODEOFF"));
       return;
 
     default:
@@ -61,7 +72,7 @@ void seriallet ( Task *me )
     return;
   }
 
-  debug_print(PSTR("*** Setting date to %02d/%02d/%04d %02d:%02d:%02d ***"), dia, mes, ano, hora, minuto, segundo);
+  info_print(PSTR("*** Setting date to %02d/%02d/%04d %02d:%02d:%02d ***"), dia, mes, ano, hora, minuto, segundo);
 
   TimeElements T = {(uint8_t)segundo, (uint8_t)minuto, (uint8_t)hora, (uint8_t)0, (uint8_t)dia, (uint8_t)mes, (uint8_t)CalendarYrToTm(ano)};
   t = makeTime(T);
@@ -78,7 +89,7 @@ void seriallet ( Task *me )
   setTime(t);
   setDS3231time (second(t), minute(t), hour(t), weekday(t), day(t), month(t), year(t) - Y2KMARKFIX);
 
-  Serial.println(F("!!! Ok !!!"));
+  info_print(PSTR("!!! Ok !!!"));
 
   return;
 }
@@ -86,6 +97,7 @@ void seriallet ( Task *me )
 /* Sincroniza a libc com o RTC */
 void timerlet ( Task *me )
 {
+  int period;
   time_t t, rtc;
   
   t = now();
@@ -93,29 +105,24 @@ void timerlet ( Task *me )
 
   debug_print(PSTR("time_t: %ld rtc: %ld"), t, rtc);
 
-  if (t == 0L)
-    setDateFromSource(&t);
-
   if (t != rtc)
-  {
-    t = rtc;
     setTime(rtc);
-  }
 
-  unsigned int needdrift = t % (TIMESYNCING/1000UL);
-  if (needdrift)
+  unsigned int drift = rtc % (TIMESYNCING/1000UL);
+  if (drift)
   {
-    int period = (TIMESYNCING/1000UL) - needdrift;
+    period = (TIMESYNCING/1000UL) - drift;
 
-    TimerFixer *t = new TimerFixer (period * 1000UL, me);
-    t->startDelayed();
+    TimerFixer *tfix = new TimerFixer (period * 1000UL, me);
+    tfix->startDelayed();
     
     debug_print(PSTR("timerlet Need to drift %d seconds"), period);
   }
 
   debug_print(PSTR("Time from RTC is %ld"), rtc);
   debug_print(PSTR("Time from libc is %ld"), t);
-  debug_print(PSTR("drift is %ld"), t - rtc);
+  if (t != 0)
+    debug_print(PSTR("drift is %ld"), rtc - t);
   
   return;
 }
@@ -146,14 +153,13 @@ void tasklet ( Task *me )
   
   if (lastState == MODEINVALID)
   {
-    debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
-
-    lastState = MODEOFF;
-
     if (Flag == MODEOFF) {
       debug_print(PSTR("Making sure mode is off"));
       relayOff.pressButton();
     }
+
+    debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
+    lastState = MODEOFF;
 
     return;
   }
@@ -176,13 +182,13 @@ void tasklet ( Task *me )
     }
   }
 
-  unsigned int needdrift = t % (POOLINGTIME/1000UL);
-  if (needdrift)
+  unsigned int drift = t % (POOLINGTIME/1000UL);
+  if (drift)
   {
-    int period = (POOLINGTIME/1000UL) - needdrift;
+    int period = (POOLINGTIME/1000UL) - drift;
 
-    TimerFixer *t = new TimerFixer (period * 1000UL, me);
-    t->startDelayed();
+    TimerFixer *tfix = new TimerFixer (period * 1000UL, me);
+    tfix->startDelayed();
     
     debug_print(PSTR("tasklet Need to drift %d seconds"), period);
   }

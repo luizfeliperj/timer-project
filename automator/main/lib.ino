@@ -1,32 +1,60 @@
+/* Template utilizado para montar mensagens de debug */
+template<class T> int debug_print_hlp (uint8_t enabled, const __FlashStringHelper* file, const int line, const T fmt, ...)
+{
+  int r;
+  va_list args;
+  char *lpBuffer, buffer[MAXSTRINGBUFFER];
+
+  if (enabled == MODEOFF)
+    return 0;
+
+  strcpy_P (buffer, (const char *) file);
+  lpBuffer  = strrchr(buffer, PATHSEPARATOR);
+  if (lpBuffer)
+    strcpy (buffer, lpBuffer + 1);
+
+  lpBuffer = buffer + strlen(buffer);
+  r = snprintf_P (lpBuffer, sizeof(buffer) - strlen(buffer), PSTR(":%d "), line);
+
+  va_start (args, fmt);
+  lpBuffer += r;
+  r += vsnprintf_P(lpBuffer, sizeof(buffer) - strlen(buffer), (const char *) fmt, args);
+  va_end(args);
+
+  Serial.println(buffer);
+
+  return r;
+}
+
 /* Classe que empacota as operacoes do rele */
 class Relay : public DelayRun {
   protected:
-    uint8_t pin;
+    
     struct {
+      uint8_t  pin:5;
+      uint8_t  tries:2;
       uint8_t  mode:1;
-      uint8_t tries:7;
     } prop;
 
   private:
     boolean turnOn () {
-      debug_print(PSTR("Turning on relay %d"), this->pin);
+      debug_print(PSTR("Turning on relay %d"), this->prop.pin);
 
-      digitalWrite (this->pin, LOW);
+      digitalWrite (this->prop.pin, LOW);
       return true;
     }
 
     boolean turnOff () {
-      debug_print(PSTR("Turning off relay %d"), this->pin);
+      debug_print(PSTR("Turning off relay %d"), this->prop.pin);
 
-      digitalWrite (this->pin, HIGH);
+      digitalWrite (this->prop.pin, HIGH);
       return true;
     }
 
     static boolean Click ( Task* task ) {
       Relay *r = (static_cast<Relay*>(task));
 
-      debug_print(PSTR("Property tries is %d"), r->prop.tries);
-      debug_print(PSTR("Property mode is %d"), r->prop.mode);
+      debug_print(PSTR("Property tries is %d, mode is %d"), r->prop.tries, r->prop.mode);
 
       switch (r->prop.mode) {
         case MODEON:
@@ -47,10 +75,10 @@ class Relay : public DelayRun {
     }
 
   public:
-    Relay (unsigned long delayMs, int pin) : DelayRun (delayMs, Click) { this->pin = pin; }
+    Relay (unsigned long delayMs, int pin) : DelayRun (delayMs, Click) { this->prop.pin = pin; }
     
     void pressButton() {
-      debug_print(PSTR("pressButton [%d]"), this->pin);
+      debug_print(PSTR("pressButton [%d]"), this->prop.pin);
       
       this->prop.mode = MODEOFF;
       this->prop.tries = PRESSBUTTONTRIES;
@@ -219,6 +247,8 @@ const time_t getTimeFromRTC()
   case 7:
     szwrote = snprintf_P (lpBuffer, buffersz, PSTR("Saturday"));
     break;
+  default:
+    szwrote = snprintf_P (lpBuffer, buffersz, PSTR("Invalid"));
   }
   
   lpBuffer += szwrote;
@@ -231,7 +261,7 @@ const time_t getTimeFromRTC()
   const time_t t = makeTime(T);
   
   return t;
-}
+}  
 
 /* Funcao que empacota a verificacao de se o horario corrente eh horario de verao */
 int ehHorarioDeVerao(const time_t now, const int Month, const int Year)
@@ -276,55 +306,54 @@ int ehHorarioDeVerao(const time_t now, const int Month, const int Year)
 /* Funcao de ajuda para imprimir o horario corrente */
 void printcurrentdate(time_t t)
 {
-  char buffer[MAXSTRINGBUFFER];
-  
   if (ehHorarioDeVerao(t, month(t), year(t)))
   {
     t += SECS_PER_HOUR;
   }
     
   int ano = year(t), mes = month(t), dia = day(t), hora = hour(t), minuto = minute(t), segundo = second(t);
-  
-  snprintf_P(buffer, sizeof(buffer),PSTR("*** now() is %02d/%02d/%04d %02d:%02d:%02d ***"), dia, mes, ano, hora, minuto, segundo);
-  Serial.println(buffer);
+  info_print(PSTR("*** now() is %02d/%02d/%04d %02d:%02d:%02d ***"), dia, mes, ano, hora, minuto, segundo);
 
   return;
 }
 
-/* Se o RTC e a libc nao retornarem um valor valido, usar a data de compilacao como sendo a data corrente */
-void setDateFromSource(time_t *t)
+/* Salva na EEPROM a quantidade de boots que o arduino fez */
+uint16_t get_next_count(const uint8_t increment = 0)
 {
-  char Month[4];
-  char buffer[MAXSTRINGBUFFER];
-  int m, Day, Year, Hour, Minute, Second;
-  const char *today = PSTR(__DATE__ " " __TIME__ );
+  uint8_t i = 0;
+  uint16_t count = 0;
 
-  strncpy_P(buffer, today, MAXSTRINGBUFFER);
-  sscanf_P (buffer, PSTR("%3s %d %d %d:%d:%d"), Month, &Day, &Year, &Hour, &Minute, &Second);
-  switch (Month[0]) {
-    case 'J': m = Month[1] == 'a' ? 1 : m = Month[2] == 'n' ? 6 : 7; break;
-    case 'F': m = 2; break;
-    case 'A': m = Month[2] == 'r' ? 4 : 8; break;
-    case 'M': m = Month[2] == 'r' ? 3 : 5; break;
-    case 'S': m = 9; break;
-    case 'O': m = 10; break;
-    case 'N': m = 11; break;
-    case 'D': m = 12; break;
-  }
-
-  TimeElements T = {(uint8_t)Second, (uint8_t)Minute, (uint8_t)Hour, (uint8_t)0, (uint8_t)Day, (uint8_t)m, (uint8_t)CalendarYrToTm(Year)};
-  *t = makeTime(T);
-  
-  int EhHorarioDeVerao = ehHorarioDeVerao(*t, month(*t), year(*t));
-  if (EhHorarioDeVerao)
+  if (increment)
   {
-    
-    *t -= SECS_PER_HOUR;
-    debug_print(PSTR("ehHorarioDeVerao returned true"));
+    for (i = 0; i < EEPROMCELLSTOUSE; i++)
+      if (EEPROM.read(i) != 0xff)
+        break;
+
+    if (i == EEPROMCELLSTOUSE)
+    {
+      debug_print (PSTR("Formatando EEPROM"));
+      for (i = 0; i < EEPROMCELLSTOUSE; i++)
+        EEPROM.write(i, 0);
+    }
+
+    count = EEPROM.read(0);
+    for (i = 1; i < EEPROMCELLSTOUSE; i++)
+      if (count != EEPROM.read(i))
+        break;
+
+    if (i == EEPROMCELLSTOUSE)
+    {
+      EEPROM.write(0, count+1);
+    }
+    else
+    {
+      EEPROM.write(i, count);
+    }
   }
 
-  setTime(*t);
-  
-  debug_print(PSTR("Just booted, using converted hardcoded time from '%s' to %ld"), buffer, *t);
-  return;
+  count = 0;
+  for (i = 0; i < EEPROMCELLSTOUSE; i++)
+    count += EEPROM.read(i);
+
+  return count;
 }

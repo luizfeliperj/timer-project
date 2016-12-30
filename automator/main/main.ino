@@ -5,6 +5,7 @@
 #include <BlinkTask.h>
 #include <DelayRun.h>
 #include <stdint.h>
+#include <EEPROM.h>
 #include <avr/wdt.h>
 #include <avr/pgmspace.h>
 
@@ -13,8 +14,10 @@ struct {
   time_t inicio, fim;
 } cacheEhHorarioDeVerao;
 
+uint16_t get_next_count(const uint8_t);
+
 /* DEBUG FLAGS */
-#define ENABLE_DEBUG MODEON
+#define ENABLE_DEBUG MODEOFF
 
 #define MODEON             1
 #define MODEOFF            0
@@ -29,59 +32,32 @@ struct {
 #define TIMESYNCING        (60 * 60 * 1000L)
 #define POOLINGTIME        (30 * 1000L)
 #define PRESSBUTTONTIME    ( 2 * 1000L)
-#define PRESSBUTTONTRIES   10
+#define PRESSBUTTONTRIES   3
 #define SERIALTIMEOUT      100L
 #define SERIALPOOLING      1000L
 #define LEDBLINKTIMES      3
 #define LEDBLINKINTERVAL   100
 #define PATHSEPARATOR      '/'
 #define TIMERTABLESPLITMIN 5
+#define EEPROMCELLSTOUSE   128
 #define SECONDS_IN_MINUTE  60
 #define DS3231_I2C_ADDRESS 0x68
 #define SECONDS_IN_HOUR    (60 * SECONDS_IN_MINUTE)
 #define DATETIMESTRINGLEN  sizeof("YYYYMMDDHHMMSS") - 1
 
-
 #ifdef ENABLE_DEBUG
 uint8_t debugenabled = ENABLE_DEBUG;
-#define debug_print(fmt, ...) debug_print_hlp(F(__FILE__), __LINE__, fmt, ##__VA_ARGS__);
-template<class T> int debug_print_hlp (const __FlashStringHelper* file, const int line, const T fmt, ...)
-{
-  int r;
-  va_list args;
-  char *lpBuffer, buffer[MAXSTRINGBUFFER];
-
-  if (debugenabled == MODEON) {
-    return 0;
-  }
-
-  strcpy_P (buffer, (const char *) file);
-  lpBuffer  = strrchr(buffer, PATHSEPARATOR);
-  if (lpBuffer)
-    strcpy (buffer, lpBuffer + 1);
-
-  lpBuffer = buffer + strlen(buffer);
-  r = snprintf_P (lpBuffer, sizeof(buffer) - strlen(buffer), PSTR(":%d "), line);
-
-  va_start (args, fmt);
-  lpBuffer += r;
-  r += vsnprintf_P(lpBuffer, sizeof(buffer) - strlen(buffer), (const char *) fmt, args);
-  va_end(args);
-
-  Serial.println(buffer);
-
-  return r;
-}
+#define debug_print(fmt, ...) debug_print_hlp(debugenabled, F(__FILE__), __LINE__, fmt, ##__VA_ARGS__);
 #else
 #define debug_print(fmt, ...) 0;
 #endif
+#define info_print(fmt, ...) debug_print_hlp(1, F(__FILE__), __LINE__, fmt, ##__VA_ARGS__);
 
 void setup() {
   // put your setup code here, to run once:
   wdt_disable();
-  
+
   Wire.begin();
-  
 
   cacheEhHorarioDeVerao.fim = 0;
   cacheEhHorarioDeVerao.year = 0;
@@ -113,5 +89,5 @@ void setup() {
 
   wdt_enable(WDTO_2S);
 
-  debug_print(PSTR("End of setup process..."));
+  debug_print(PSTR("End of setup process, boot count is %d"), get_next_count(1));
 }
