@@ -40,7 +40,7 @@ void seriallet ( Task *me )
       Serial.read();
       info_print(PSTR("Feito por Luiz Felipe Silva"));
       info_print(PSTR("Em " __DATE__ " " __TIME__ ));
-      info_print(PSTR("Boot counter: %d"), get_next_count());
+      info_print(PSTR("Boot count: %d"), get_next_count());
       return;
 
     case 'o':
