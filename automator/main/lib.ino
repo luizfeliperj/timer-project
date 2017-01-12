@@ -51,6 +51,16 @@ class Relay : public DelayRun {
       return true;
     }
 
+    void pressButton() {
+      debug_print(PSTR("pressButton [%d]"), this->prop.pin);
+      
+      this->prop.mode = MODEOFF;
+      this->prop.tries = PRESSBUTTONTRIES;
+
+      this->turnOn();
+      this->startDelayed();
+    }
+
     static boolean Click ( Task* task ) {
       Relay *r = (static_cast<Relay*>(task));
 
@@ -70,36 +80,27 @@ class Relay : public DelayRun {
 
       r->prop.mode = (r->prop.mode + 1) & 0x1;
       
-      if (r->prop.tries)
+      if (r->prop.tries) {
         r->startDelayed();
+      } else {
+        delete r;
+      }
     }
-
-  public:
-    Relay (unsigned long delayMs, int pin) : DelayRun (delayMs, Click) { this->prop.pin = pin; }
     
-    void pressButton() {
-      debug_print(PSTR("pressButton [%d]"), this->prop.pin);
-      
-      this->prop.mode = MODEOFF;
-      this->prop.tries = PRESSBUTTONTRIES;
-
-      this->turnOn();
-      this->startDelayed();
+  public:
+    Relay (unsigned long delayMs, int pin) : DelayRun (delayMs, Click) { this->prop.pin = pin; this->pressButton();}
+    ~Relay()
+    {
+      debug_print(PSTR("Relay() going down for %04x"), this);
     }
+    
 };
 
 /* Classe que ajusta o timer para terminar sempre em hora cheia */
 class TimerFixer : public DelayRun {
-  protected:
+  private:
     Task *target;
 
-  public:
-    TimerFixer (unsigned long delayMs, Task *target) : DelayRun (delayMs, timerFixer) { this->target = target; }
-    ~TimerFixer()
-    {
-      debug_print(PSTR("TimerFixer() going down for %04x"), this->target);
-    }
-    
     /* Funcao auxiliar para corrigir a execucao do callback a cada hora cheia */
     static boolean timerFixer ( Task* task )
     {
@@ -110,6 +111,14 @@ class TimerFixer : public DelayRun {
       delete t;
       return true;
     }
+
+  public:
+    TimerFixer (unsigned long delayMs, Task *target) : DelayRun (delayMs, timerFixer) { this->target = target; this->startDelayed(); }
+    ~TimerFixer()
+    {
+      debug_print(PSTR("TimerFixer() going down for %04x"), this->target);
+    }
+    
 };
 
 /* Retorna o domingo de páscoa de um determinado ano */

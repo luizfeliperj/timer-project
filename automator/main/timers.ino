@@ -1,6 +1,4 @@
 static int8_t lastState = MODEINVALID;
-static Relay relayOn(PRESSBUTTONTIME, PIN_RELAY1);
-static Relay relayOff(PRESSBUTTONTIME, PIN_RELAY2);
 static BlinkTask led = BlinkTask(PIN_LED, LEDBLINKINTERVAL, LEDBLINKINTERVAL, LEDBLINKTIMES);
 
 /* Le comandos enviados pela serial regularmente a cada segundo */
@@ -46,14 +44,14 @@ void seriallet ( Task *me )
     case 'o':
     case 'O':
       Serial.read();
-      relayOn.pressButton();
+      new Relay(PRESSBUTTONTIME, PIN_RELAY1);
       info_print(PSTR("Force MODEON"));
       return;
 
     case 'f':
     case 'F':
       Serial.read();
-      relayOff.pressButton();
+      new Relay(PRESSBUTTONTIME, PIN_RELAY2);
       info_print(PSTR("Force MODEOFF"));
       return;
 
@@ -112,10 +110,7 @@ void timerlet ( Task *me )
   if (drift)
   {
     period = (TIMESYNCING/1000UL) - drift;
-
-    TimerFixer *tfix = new TimerFixer (period * 1000UL, me);
-    tfix->startDelayed();
-    
+    new TimerFixer (period * 1000UL, me);
     debug_print(PSTR("timerlet Need to drift %d seconds"), period);
   }
 
@@ -155,7 +150,7 @@ void tasklet ( Task *me )
   {
     if (Flag == MODEOFF) {
       debug_print(PSTR("Making sure mode is off"));
-      relayOff.pressButton();
+      new Relay(PRESSBUTTONTIME, PIN_RELAY2);
     }
 
     debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
@@ -169,11 +164,11 @@ void tasklet ( Task *me )
     lastState = Flag;
     switch (Flag) {
       case 0: // Desligar
-        relayOff.pressButton();
+        new Relay(PRESSBUTTONTIME, PIN_RELAY2);
         break;;
 
       case 1: // Ligar
-        relayOn.pressButton();
+        new Relay(PRESSBUTTONTIME, PIN_RELAY1);
         break;;
 
       default:
@@ -186,10 +181,7 @@ void tasklet ( Task *me )
   if (drift)
   {
     int period = (POOLINGTIME/1000UL) - drift;
-
-    TimerFixer *tfix = new TimerFixer (period * 1000UL, me);
-    tfix->startDelayed();
-    
+    new TimerFixer (period * 1000UL, me);
     debug_print(PSTR("tasklet Need to drift %d seconds"), period);
   }
 
