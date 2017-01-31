@@ -1,3 +1,5 @@
+#undef __FILENAME__
+#define __FILENAME__ "timers.ino"
 static int8_t lastState = MODEINVALID;
 static BlinkTask led = BlinkTask(PIN_LED, LEDBLINKINTERVAL, LEDBLINKINTERVAL, LEDBLINKTIMES);
 
@@ -5,6 +7,7 @@ static BlinkTask led = BlinkTask(PIN_LED, LEDBLINKINTERVAL, LEDBLINKINTERVAL, LE
 void seriallet ( Task *me )
 {
   time_t t = now();
+  time_t uptime = millis();
   char buffer[DATETIMESTRINGLEN + 1];
   int ano, mes, dia, hora, minuto, segundo;
 
@@ -22,7 +25,7 @@ void seriallet ( Task *me )
   *buffer = Serial.peek();
   if (*buffer == -1)
     return;
-
+  
   switch (*buffer) {
 #ifdef ENABLE_DEBUG
     case 'd':
@@ -36,8 +39,13 @@ void seriallet ( Task *me )
     case 'a':
     case 'A':
       Serial.read();
-      info_print(PSTR("Feito por Luiz Felipe Silva"));
-      info_print(PSTR("Em " __DATE__ " " __TIME__ ));
+      info_print(PSTR("Compilado por Luiz Felipe Silva"));
+      info_print(PSTR("Em " __TIMESTAMP__ ));
+      info_print(PSTR("Uptime %d %02d:%02d:%02d"),
+          (uptime/MSECS_PER_SEC)  / SECS_PER_DAY,
+          ((uptime/MSECS_PER_SEC) % SECS_PER_DAY)  / SECS_PER_HOUR,
+          ((uptime/MSECS_PER_SEC) % SECS_PER_HOUR) / SECS_PER_MIN,
+          (uptime/MSECS_PER_SEC)  % SECS_PER_MIN );
       info_print(PSTR("Boot count: %d"), get_next_count());
       return;
 

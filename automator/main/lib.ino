@@ -1,3 +1,5 @@
+#undef __FILENAME__
+#define __FILENAME__ "lib.ino"
 /* Template utilizado para montar mensagens de debug */
 template<class T> int debug_print_hlp (uint8_t enabled, const __FlashStringHelper* file, const int line, const T fmt, ...)
 {
@@ -9,10 +11,6 @@ template<class T> int debug_print_hlp (uint8_t enabled, const __FlashStringHelpe
     return 0;
 
   strcpy_P (buffer, (const char *) file);
-  lpBuffer  = strrchr(buffer, PATHSEPARATOR);
-  if (lpBuffer)
-    strcpy (buffer, lpBuffer + 1);
-
   lpBuffer = buffer + strlen(buffer);
   r = snprintf_P (lpBuffer, sizeof(buffer) - strlen(buffer), PSTR(":%d "), line);
 

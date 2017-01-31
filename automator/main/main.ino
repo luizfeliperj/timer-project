@@ -1,3 +1,5 @@
+#undef __FILENAME__
+#define __FILENAME__ "main.ino"
 #include <Arduino.h>
 #include <Wire.h>
 #include <TimeLib.h>
@@ -41,17 +43,18 @@ uint16_t get_next_count(const uint8_t);
 #define TIMERTABLESPLITMIN 5L
 #define EEPROMCELLSTOUSE   128
 #define SECONDS_IN_MINUTE  60
+#define MSECS_PER_SEC      1000
 #define DS3231_I2C_ADDRESS 0x68
 #define SECONDS_IN_HOUR    (60L * SECONDS_IN_MINUTE)
 #define DATETIMESTRINGLEN  sizeof("YYYYMMDDHHMMSS") - 1
 
 #ifdef ENABLE_DEBUG
 uint8_t debugenabled = ENABLE_DEBUG;
-#define debug_print(fmt, ...) debug_print_hlp(debugenabled, F(__FILE__), __LINE__, fmt, ##__VA_ARGS__);
+#define debug_print(fmt, ...) debug_print_hlp(debugenabled, F(__FILENAME__), __LINE__, fmt, ##__VA_ARGS__);
 #else
 #define debug_print(fmt, ...) 0;
 #endif
-#define info_print(fmt, ...) debug_print_hlp(1, F(__FILE__), __LINE__, fmt, ##__VA_ARGS__);
+#define info_print(fmt, ...) debug_print_hlp(1, F(__FILENAME__), __LINE__, fmt, ##__VA_ARGS__);
 
 void setup() {
   // put your setup code here, to run once:
