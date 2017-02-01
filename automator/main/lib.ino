@@ -1,5 +1,5 @@
 #undef __FILENAME__
-#define __FILENAME__ "lib.ino"
+#define __FILENAME__ "lib"
 /* Template utilizado para montar mensagens de debug */
 template<class T> int debug_print_hlp (uint8_t enabled, const __FlashStringHelper* file, const int line, const T fmt, ...)
 {

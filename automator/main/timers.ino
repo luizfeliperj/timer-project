@@ -1,5 +1,5 @@
 #undef __FILENAME__
-#define __FILENAME__ "timers.ino"
+#define __FILENAME__ "timers"
 static int8_t lastState = MODEINVALID;
 static BlinkTask led = BlinkTask(PIN_LED, LEDBLINKINTERVAL, LEDBLINKINTERVAL, LEDBLINKTIMES);
 

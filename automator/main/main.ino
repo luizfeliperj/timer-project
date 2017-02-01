@@ -1,5 +1,5 @@
 #undef __FILENAME__
-#define __FILENAME__ "main.ino"
+#define __FILENAME__ "main"
 #include <Arduino.h>
 #include <Wire.h>
 #include <TimeLib.h>

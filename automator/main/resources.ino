@@ -1,5 +1,5 @@
 #undef __FILENAME__
-#define __FILENAME__ "resources.ino"
+#define __FILENAME__ "resources"
 // Timer table
 const PROGMEM byte timertable[24][12] = {
   /*         00        05       10       15       20       25       30       35       40       45       50       55   */
