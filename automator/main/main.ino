@@ -31,21 +31,20 @@ uint16_t get_next_count(const uint8_t);
 #define MAXSTRINGBUFFER    128
 #define BAUDRATE           9600L
 #define Y2KMARKFIX         2000L
-#define TIMESYNCING        (60 * 60 * 1000L)
-#define POOLINGTIME        (30 * 1000L)
-#define PRESSBUTTONTIME    ( 2 * 1000L)
+#define MSECS_PER_SEC      1000L
+#define TIMESYNCING        (60L * 60L * MSECS_PER_SEC)
+#define POOLINGTIME        (30L * MSECS_PER_SEC)
+#define PRESSBUTTONTIME    ( 2L * MSECS_PER_SEC)
 #define PRESSBUTTONTRIES   3
 #define SERIALTIMEOUT      100L
-#define SERIALPOOLING      1000L
 #define LEDBLINKTIMES      3
 #define LEDBLINKINTERVAL   100
 #define PATHSEPARATOR      '/'
 #define TIMERTABLESPLITMIN 5L
 #define EEPROMCELLSTOUSE   128
-#define SECONDS_IN_MINUTE  60
-#define MSECS_PER_SEC      1000
 #define DS3231_I2C_ADDRESS 0x68
-#define SECONDS_IN_HOUR    (60L * SECONDS_IN_MINUTE)
+#define SECS_PER_MIN       60L
+#define SECS_PER_HOUR     (60L * SECS_PER_MIN)
 #define DATETIMESTRINGLEN  sizeof("YYYYMMDDHHMMSS") - 1
 
 #ifdef ENABLE_DEBUG
@@ -62,18 +61,8 @@ void setup() {
 
   Wire.begin();
 
-  cacheEhHorarioDeVerao.fim = 0;
-  cacheEhHorarioDeVerao.year = 0;
-  cacheEhHorarioDeVerao.inicio = 0;
-
-  #ifdef ENABLE_DEBUG
-  while (!Serial);
-  #endif // ENABLE_DEBUG
-
-  if (Serial) {
-    Serial.begin(BAUDRATE);
-    Serial.setTimeout(SERIALTIMEOUT);
-  }
+  Serial.begin(BAUDRATE);
+  Serial.setTimeout(SERIALTIMEOUT);
 
   digitalWrite (PIN_RELAY1, HIGH);
   pinMode( PIN_RELAY1, OUTPUT );
@@ -81,16 +70,20 @@ void setup() {
   digitalWrite (PIN_RELAY2, HIGH);
   pinMode( PIN_RELAY2, OUTPUT );
 
+  memset (&cacheEhHorarioDeVerao, 0, sizeof(cacheEhHorarioDeVerao));
+
   /* Primeiro ajusta o horario da libc */
   SoftTimer.add (new Task (TIMESYNCING, timerlet));
 
   /* Segundo, faz o que tem que fazer */
   SoftTimer.add (new Task (POOLINGTIME, tasklet));
 
-  /* Terceiro, verifica por pedidos na serial */
-  SoftTimer.add (new Task (SERIALPOOLING, seriallet));
-
   wdt_enable(WDTO_2S);
 
   debug_print(PSTR("End of setup process, boot count is %d"), get_next_count(1));
+}
+
+void SerialEvent() {
+  /* Se houver um SerialEvent, verifica por pedidos na serial */
+  SoftTimer.add (new Task (0, seriallet));
 }

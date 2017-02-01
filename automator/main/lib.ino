@@ -299,7 +299,7 @@ int ehHorarioDeVerao(const time_t now, const int Month, const int Year)
   {
     const time_t Fim = cacheEhHorarioDeVerao.fim;
     debug_print(PSTR("Fim do horario de Verao: %lu"), Fim);
-    if ( (now + SECONDS_IN_HOUR) < Fim ) {
+    if ( (now + SECS_PER_HOUR) < Fim ) {
       horarioDeVerao = 1;
       debug_print(PSTR("Eh Horario de Verao"));
     }

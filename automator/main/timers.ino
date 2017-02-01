@@ -97,6 +97,9 @@ void seriallet ( Task *me )
 
   info_print(PSTR("!!! Ok !!!"));
 
+  SoftTimer.remove(me);
+  delete me;
+
   return;
 }
 
@@ -107,6 +110,7 @@ void timerlet ( Task *me )
   time_t t, rtc;
   
   t = now();
+  return;
   rtc = getTimeFromRTC();
 
   debug_print(PSTR("time_t: %ld rtc: %ld"), t, rtc);
@@ -160,6 +164,7 @@ void tasklet ( Task *me )
       debug_print(PSTR("Making sure mode is off"));
       new Relay(PRESSBUTTONTIME, PIN_RELAY2);
     }
+  return;
 
     debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
     lastState = MODEOFF;
