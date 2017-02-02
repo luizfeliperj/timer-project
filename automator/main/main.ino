@@ -8,8 +8,11 @@
 #include <DelayRun.h>
 #include <stdint.h>
 #include <EEPROM.h>
+#include <U8glib.h>
 #include <avr/wdt.h>
 #include <avr/pgmspace.h>
+
+U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE);
 
 struct {
   int year;
@@ -53,7 +56,7 @@ uint8_t debugenabled = ENABLE_DEBUG;
 #else
 #define debug_print(fmt, ...) 0;
 #endif
-#define info_print(fmt, ...) debug_print_hlp(1, F(__FILENAME__), __LINE__, fmt, ##__VA_ARGS__);
+#define info_print(fmt, ...) debug_print_hlp(true, F(__FILENAME__), __LINE__, fmt, ##__VA_ARGS__);
 
 void setup() {
   // put your setup code here, to run once:
@@ -77,6 +80,12 @@ void setup() {
 
   /* Segundo, faz o que tem que fazer */
   SoftTimer.add (new Task (POOLINGTIME, tasklet));
+
+  /* Terceiro, atualiza o display */
+  SoftTimer.add (new Task (MSECS_PER_SEC, updater));
+
+  /* Quarto, gera uma task para zerar o watchdog */
+  SoftTimer.add (new Task (MSECS_PER_SEC, watchdogger));
 
   wdt_enable(WDTO_2S);
 

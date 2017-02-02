@@ -3,6 +3,18 @@
 static int8_t lastState = MODEINVALID;
 static BlinkTask led = BlinkTask(PIN_LED, LEDBLINKINTERVAL, LEDBLINKINTERVAL, LEDBLINKTIMES);
 
+/* Reinicia o watchdog */
+void watchdogger ( Task *me )
+{
+  wdt_reset();
+  debug_print(PSTR("Watchdog reset"));
+}
+
+/* Atualiza o display */
+void updater ( Task *me )
+{
+}
+
 /* Le comandos enviados pela serial regularmente a cada segundo */
 void seriallet ( Task *me )
 {
@@ -10,9 +22,6 @@ void seriallet ( Task *me )
   time_t uptime = millis();
   char buffer[DATETIMESTRINGLEN + 1];
   int ano, mes, dia, hora, minuto, segundo;
-
-  wdt_reset();
-  debug_print(PSTR("Watchdog reset"));
   
   if (lastState == MODEON) {
     debug_print(PSTR("Mode is on, blink led"));
@@ -106,31 +115,34 @@ void seriallet ( Task *me )
 /* Sincroniza a libc com o RTC */
 void timerlet ( Task *me )
 {
+  debug_print(PSTR("Running timerlet()..."));
+  
   int period;
-  time_t t, rtc;
+  time_t t, source, rtc;
   
   t = now();
-  return;
   rtc = getTimeFromRTC();
+  source = getDateFromSource();
 
-  debug_print(PSTR("time_t: %ld rtc: %ld"), t, rtc);
+  if ((t < source) && ( source > rtc))
+  {
+    debug_print(PSTR("rtc time is inconsist, %ld > %ld. Using source time"), period);
+    rtc = source;
+  }
+
+  debug_print(PSTR("now(): %ld source: %ld rtc: %ld"), t, source, rtc);
 
   if (t != rtc)
-    setTime(rtc);
+    new RTCSyncer (MSECS_PER_SEC, rtc, me);
 
-  unsigned int drift = rtc % (TIMESYNCING/1000UL);
+  unsigned int drift = rtc % (TIMESYNCING/MSECS_PER_SEC);
   if (drift)
   {
-    period = (TIMESYNCING/1000UL) - drift;
-    new TimerFixer (period * 1000UL, me);
+    period = (TIMESYNCING/MSECS_PER_SEC) - drift;
+    new TimerFixer (period * MSECS_PER_SEC, me);
     debug_print(PSTR("timerlet Need to drift %d seconds"), period);
   }
 
-  debug_print(PSTR("Time from RTC is %ld"), rtc);
-  debug_print(PSTR("Time from libc is %ld"), t);
-  if (t != 0)
-    debug_print(PSTR("drift is %ld"), rtc - t);
-  
   return;
 }
 
@@ -190,11 +202,11 @@ void tasklet ( Task *me )
     }
   }
 
-  unsigned int drift = t % (POOLINGTIME/1000UL);
+  unsigned int drift = t % (POOLINGTIME/MSECS_PER_SEC);
   if (drift)
   {
-    int period = (POOLINGTIME/1000UL) - drift;
-    new TimerFixer (period * 1000UL, me);
+    int period = (POOLINGTIME/MSECS_PER_SEC) - drift;
+    new TimerFixer (period * MSECS_PER_SEC, me);
     debug_print(PSTR("tasklet Need to drift %d seconds"), period);
   }
 

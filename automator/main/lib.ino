@@ -88,10 +88,7 @@ class Relay : public DelayRun {
   public:
     Relay (unsigned long delayMs, int pin) : DelayRun (delayMs, Click) { this->prop.pin = pin; this->pressButton();}
     ~Relay()
-    {
-      debug_print(PSTR("Relay() going down for %04x"), this);
-    }
-    
+    { debug_print(PSTR("Relay() going down for %04x"), this); }
 };
 
 /* Classe que ajusta o timer para terminar sempre em hora cheia */
@@ -113,9 +110,33 @@ class TimerFixer : public DelayRun {
   public:
     TimerFixer (unsigned long delayMs, Task *target) : DelayRun (delayMs, timerFixer) { this->target = target; this->startDelayed(); }
     ~TimerFixer()
+    { debug_print(PSTR("TimerFixer() going down for %04x"), this->target); }
+    
+};
+
+/* Classe que ajusta o timer para terminar sempre em hora cheia */
+class RTCSyncer : public DelayRun {
+  private:
+    Task *target;
+    uint8_t count;
+    time_t times[3];
+
+    /* Funcao auxiliar para corrigir a execucao do callback a cada hora cheia */
+    static boolean sync ( Task* task )
     {
-      debug_print(PSTR("TimerFixer() going down for %04x"), this->target);
+      RTCSyncer *syncer = (static_cast<RTCSyncer*>(task));
+      debug_print(PSTR("Running RTCSyncer() for %04x"), syncer->target);
+
+      setTime(syncer->times[0]);
+
+      delete syncer;
+      return true;
     }
+
+  public:
+    RTCSyncer (unsigned long delayMs, time_t n, Task *target) : DelayRun (delayMs, sync) { this->target = target; this->times[0] = n, this->startDelayed(); }
+    ~RTCSyncer()
+    { debug_print(PSTR("RTCSyncer() going down for %04x"), this->target); }
     
 };
 
@@ -363,4 +384,32 @@ uint16_t get_next_count(const uint8_t increment = 0)
     count += EEPROM.read(i);
 
   return count;
+}
+
+/* timestamp da data de compilacao */
+time_t getDateFromSource()
+{
+  time_t t;
+  char Month[4];
+  char buffer[MAXSTRINGBUFFER];
+  int m = 0, Day = 0, Year = 0, Hour = 0, Minute = 0, Second = 0;
+  const char *today = PSTR(__TIMESTAMP__);
+
+  strncpy_P(buffer, today, MAXSTRINGBUFFER);
+  sscanf_P (buffer, PSTR("%*3s %3s %d %d %d:%d:%d"), Month, &Day, &Year, &Hour, &Minute, &Second);
+  
+  switch (Month[0]) {
+    case 'J': m = Month[1] == 'a' ? 1 : m = Month[2] == 'n' ? 6 : 7; break;
+    case 'F': m = 2; break;
+    case 'A': m = Month[2] == 'r' ? 4 : 8; break;
+    case 'M': m = Month[2] == 'r' ? 3 : 5; break;
+    case 'S': m = 9; break;
+    case 'O': m = 10; break;
+    case 'N': m = 11; break;
+    case 'D': m = 12; break;
+    default: debug_print(PSTR("Month was not decoded [%s]"), buffer); break;
+  }
+
+  TimeElements T = {(uint8_t)Second, (uint8_t)Minute, (uint8_t)Hour, (uint8_t)0, (uint8_t)Day, (uint8_t)m, (uint8_t)CalendarYrToTm(Year)};
+  return makeTime(T);
 }
