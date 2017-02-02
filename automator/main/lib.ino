@@ -129,6 +129,14 @@ class RTCSyncer : public DelayRun {
 
       setTime(syncer->times[0]);
 
+      unsigned int drift = syncer->times[0] % (TIMESYNCING/MSECS_PER_SEC);
+      if (drift)
+      {
+        int period = (TIMESYNCING/MSECS_PER_SEC) - drift;
+        new TimerFixer (period * MSECS_PER_SEC, syncer->target);
+        debug_print(PSTR("timerlet Need to drift %d seconds"), period);
+      }
+
       delete syncer;
       return true;
     }

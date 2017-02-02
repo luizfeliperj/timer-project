@@ -117,16 +117,13 @@ void timerlet ( Task *me )
 {
   debug_print(PSTR("Running timerlet()..."));
   
-  int period;
-  time_t t, source, rtc;
-  
-  t = now();
-  rtc = getTimeFromRTC();
-  source = getDateFromSource();
+  time_t t = now();
+  time_t rtc = getTimeFromRTC();
+  time_t source = getDateFromSource();
 
   if ((t < source) && ( source > rtc))
   {
-    debug_print(PSTR("rtc time is inconsist, %ld > %ld. Using source time"), period);
+    debug_print(PSTR("rtc time is inconsist, %ld > %ld. Using source time"), source, rtc);
     rtc = source;
   }
 
@@ -134,14 +131,6 @@ void timerlet ( Task *me )
 
   if (t != rtc)
     new RTCSyncer (MSECS_PER_SEC, rtc, me);
-
-  unsigned int drift = rtc % (TIMESYNCING/MSECS_PER_SEC);
-  if (drift)
-  {
-    period = (TIMESYNCING/MSECS_PER_SEC) - drift;
-    new TimerFixer (period * MSECS_PER_SEC, me);
-    debug_print(PSTR("timerlet Need to drift %d seconds"), period);
-  }
 
   return;
 }
