@@ -34,20 +34,20 @@ uint16_t get_next_count(const uint8_t);
 #define MAXSTRINGBUFFER    128
 #define BAUDRATE           9600L
 #define Y2KMARKFIX         2000L
-#define MSECS_PER_SEC      1000L
-#define TIMESYNCING        (60L * 60L * MSECS_PER_SEC)
-#define POOLINGTIME        (30L * MSECS_PER_SEC)
-#define PRESSBUTTONTIME    ( 2L * MSECS_PER_SEC)
+#define MSECS_PER_SEC      1000UL
+#define TIMESYNCING        (60UL * 60UL * MSECS_PER_SEC)
+#define TIMESAMPLES        3
+#define TIMESAMPLEMSEC     1000UL
+#define POOLINGTIME        (60UL * MSECS_PER_SEC)
+#define PRESSBUTTONTIME    ( 2UL * MSECS_PER_SEC)
 #define PRESSBUTTONTRIES   3
-#define SERIALTIMEOUT      100L
+#define SERIALTIMEOUT      100UL
 #define LEDBLINKTIMES      3
 #define LEDBLINKINTERVAL   100
 #define PATHSEPARATOR      '/'
 #define TIMERTABLESPLITMIN 5L
 #define EEPROMCELLSTOUSE   128
 #define DS3231_I2C_ADDRESS 0x68
-#define SECS_PER_MIN       60L
-#define SECS_PER_HOUR     (60L * SECS_PER_MIN)
 #define DATETIMESTRINGLEN  sizeof("YYYYMMDDHHMMSS") - 1
 
 #ifdef ENABLE_DEBUG
@@ -66,6 +66,9 @@ void setup() {
 
   Serial.begin(BAUDRATE);
   Serial.setTimeout(SERIALTIMEOUT);
+
+  u8g.begin();
+  u8g.setFont(u8g_font_unifont);
 
   digitalWrite (PIN_RELAY1, HIGH);
   pinMode( PIN_RELAY1, OUTPUT );

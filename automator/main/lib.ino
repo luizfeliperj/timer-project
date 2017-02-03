@@ -118,8 +118,8 @@ class TimerFixer : public DelayRun {
 class RTCSyncer : public DelayRun {
   private:
     Task *target;
-    uint8_t count;
-    time_t times[3];
+    uint8_t tries;
+    time_t times[TIMESAMPLES];
 
     /* Funcao auxiliar para corrigir a execucao do callback a cada hora cheia */
     static boolean sync ( Task* task )
@@ -127,22 +127,75 @@ class RTCSyncer : public DelayRun {
       RTCSyncer *syncer = (static_cast<RTCSyncer*>(task));
       debug_print(PSTR("Running RTCSyncer() for %04x"), syncer->target);
 
-      setTime(syncer->times[0]);
+      syncer->tries++;
+      syncer->times[syncer->tries] = getTimeFromRTC();
 
-      unsigned int drift = syncer->times[0] % (TIMESYNCING/MSECS_PER_SEC);
-      if (drift)
-      {
-        int period = (TIMESYNCING/MSECS_PER_SEC) - drift;
-        new TimerFixer (period * MSECS_PER_SEC, syncer->target);
-        debug_print(PSTR("timerlet Need to drift %d seconds"), period);
+      if (syncer->tries >= TIMESAMPLES) {
+
+        if (!syncer->isRTCSane())
+          syncer->setRTCSane();
+        
+        delete syncer;
       }
 
-      delete syncer;
+      syncer->startDelayed();
       return true;
     }
 
+    bool isRTCSane ()
+    {
+      int i;
+      time_t rtc;
+      time_t last = times[0];
+
+      for (i = 1; i < TIMESAMPLES; i++)
+      {
+        if ( (times[i] <= last) || (times[i] >= ( 2 * (TIMESAMPLEMSEC/MSECS_PER_SEC))) )
+          return false;
+
+        last = times[i];
+      }
+
+      rtc = times[TIMESAMPLES-1];
+
+      if ( abs(now() - rtc) > 1)
+        setTime(rtc);
+
+      doDrift(times[0]);
+
+      return true;
+    }
+
+    void setRTCSane ()
+    {
+      time_t t = now();
+      time_t source = getDateFromSource();
+
+      if ( source > t)
+        t = source;
+      
+      setDS3231time (second(t), minute(t), hour(t), weekday(t), day(t), month(t), year(t) - Y2KMARKFIX);
+    }
+
+    void doDrift(time_t t)
+    {
+      unsigned int drift = t % (TIMESYNCING/MSECS_PER_SEC);
+      if (drift)
+      {
+        int period = (TIMESYNCING/MSECS_PER_SEC) - drift;
+        new TimerFixer ((period * MSECS_PER_SEC) - MSECS_PER_SEC/4, target);
+        debug_print(PSTR("timerlet Need to drift %d seconds"), period);
+      }
+    }
+
   public:
-    RTCSyncer (unsigned long delayMs, time_t n, Task *target) : DelayRun (delayMs, sync) { this->target = target; this->times[0] = n, this->startDelayed(); }
+    RTCSyncer (unsigned long delayMs, time_t t, Task *target) : DelayRun (delayMs, sync) {
+      this->tries = 1;
+      this->times[0] = t;
+      this->target = target;
+      this->startDelayed();
+    }
+
     ~RTCSyncer()
     { debug_print(PSTR("RTCSyncer() going down for %04x"), this->target); }
     

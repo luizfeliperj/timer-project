@@ -13,6 +13,18 @@ void watchdogger ( Task *me )
 /* Atualiza o display */
 void updater ( Task *me )
 {
+  char buffer[100];
+  int uptime = millis()/1000;
+  int days = uptime/(24*60*60);
+  int hours = uptime%(24*60*60);
+
+  u8g.firstPage();
+  do {
+    u8g.drawStrP( 0, 20, PSTR("timer-project:"));
+
+    sprintf (buffer, "Up: %02d %02d:%02d:%02d", days, (hours / 3600), ((hours % 3600) / 60), (hours % 60));
+    u8g.drawStr( 0, 63, buffer);
+  } while( u8g.nextPage() );
 }
 
 /* Le comandos enviados pela serial regularmente a cada segundo */
@@ -121,16 +133,15 @@ void timerlet ( Task *me )
   time_t rtc = getTimeFromRTC();
   time_t source = getDateFromSource();
 
-  if ((t < source) && ( source > rtc))
+  debug_print(PSTR("now(): %ld source: %ld rtc: %ld"), t, source, rtc);
+
+  if ( rtc < source  )
   {
     debug_print(PSTR("rtc time is inconsist, %ld > %ld. Using source time"), source, rtc);
     rtc = source;
   }
 
-  debug_print(PSTR("now(): %ld source: %ld rtc: %ld"), t, source, rtc);
-
-  if (t != rtc)
-    new RTCSyncer (MSECS_PER_SEC, rtc, me);
+  new RTCSyncer (TIMESAMPLEMSEC, rtc, me);
 
   return;
 }
