@@ -8,18 +8,10 @@
 #include <DelayRun.h>
 #include <stdint.h>
 #include <EEPROM.h>
-#include <U8glib.h>
+#include <LCD.h>
 #include <avr/wdt.h>
 #include <avr/pgmspace.h>
-
-U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE);
-
-struct {
-  int year;
-  time_t inicio, fim;
-} cacheEhHorarioDeVerao;
-
-uint16_t get_next_count(const uint8_t);
+#include <LiquidCrystal_I2C.h>
 
 /* DEBUG FLAGS */
 #define ENABLE_DEBUG MODEOFF
@@ -49,6 +41,15 @@ uint16_t get_next_count(const uint8_t);
 #define EEPROMCELLSTOUSE   128
 #define DS3231_I2C_ADDRESS 0x68
 #define DATETIMESTRINGLEN  sizeof("YYYYMMDDHHMMSS") - 1
+#define I2C_ADDR    0x3F // <<----- Add your address here.  Find it from I2C Scanner
+#define BACKLIGHT_PIN     3
+#define En_pin  2
+#define Rw_pin  1
+#define Rs_pin  0
+#define D4_pin  4
+#define D5_pin  5
+#define D6_pin  6
+#define D7_pin  7
 
 #ifdef ENABLE_DEBUG
 uint8_t debugenabled = ENABLE_DEBUG;
@@ -58,6 +59,14 @@ uint8_t debugenabled = ENABLE_DEBUG;
 #endif
 #define info_print(fmt, ...) debug_print_hlp(true, F(__FILENAME__), __LINE__, fmt, ##__VA_ARGS__);
 
+struct {
+  int year;
+  time_t inicio, fim;
+} cacheEhHorarioDeVerao;
+
+uint16_t get_next_count(const uint8_t);
+LiquidCrystal_I2C  lcd(I2C_ADDR, En_pin, Rw_pin, Rs_pin, D4_pin, D5_pin, D6_pin, D7_pin);
+
 void setup() {
   // put your setup code here, to run once:
   wdt_disable();
@@ -66,9 +75,10 @@ void setup() {
 
   Serial.begin(BAUDRATE);
   Serial.setTimeout(SERIALTIMEOUT);
-
-  u8g.begin();
-  u8g.setFont(u8g_font_unifont);
+  
+  lcd.setBacklightPin(BACKLIGHT_PIN,POSITIVE);
+  lcd.setBacklight(HIGH);
+  lcd.home ();
 
   digitalWrite (PIN_RELAY1, HIGH);
   pinMode( PIN_RELAY1, OUTPUT );
@@ -85,7 +95,7 @@ void setup() {
   SoftTimer.add (new Task (POOLINGTIME, tasklet));
 
   /* Terceiro, atualiza o display */
-  SoftTimer.add (new Task (MSECS_PER_SEC, updater));
+  SoftTimer.add (new Task (MSECS_PER_SEC, displayer));
 
   /* Quarto, gera uma task para zerar o watchdog */
   SoftTimer.add (new Task (MSECS_PER_SEC, watchdogger));

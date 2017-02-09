@@ -11,26 +11,23 @@ void watchdogger ( Task *me )
 }
 
 /* Atualiza o display */
-void updater ( Task *me )
+void displayer ( Task *me )
 {
   char buffer[100];
   int uptime = millis()/1000;
   int days = uptime/(24*60*60);
   int hours = uptime%(24*60*60);
 
-  u8g.firstPage();
-  do {
-    u8g.drawStrP( 0, 20, PSTR("timer-project:"));
 
-    sprintf (buffer, "Up: %02d %02d:%02d:%02d", days, (hours / 3600), ((hours % 3600) / 60), (hours % 60));
-    u8g.drawStr( 0, 63, buffer);
-  } while( u8g.nextPage() );
+  sprintf (buffer, "Up: %02dd%02d:%02d:%02d", days, (hours / 3600), ((hours % 3600) / 60), (hours % 60));
+  lcd.setCursor (0,1);
+  lcd.print(buffer);
 }
 
 /* Le comandos enviados pela serial regularmente a cada segundo */
 void seriallet ( Task *me )
 {
-  time_t t = now();
+  time_t tNow = now();
   time_t uptime = millis();
   char buffer[DATETIMESTRINGLEN + 1];
   int ano, mes, dia, hora, minuto, segundo;
@@ -87,7 +84,7 @@ void seriallet ( Task *me )
     default:
         if (Serial.readBytes(buffer, DATETIMESTRINGLEN) != DATETIMESTRINGLEN)
         {
-          printcurrentdate(t);
+          printcurrentdate(tNow);
           return;
         }
   }
@@ -95,26 +92,26 @@ void seriallet ( Task *me )
   buffer[DATETIMESTRINGLEN] = 0;
   if ( 6 != sscanf_P(buffer, PSTR("%04d%02d%02d%02d%02d%02d"), &ano, &mes, &dia, &hora, &minuto, &segundo) )
   {
-    printcurrentdate(t);
+    printcurrentdate(tNow);
     return;
   }
 
   info_print(PSTR("*** Setting date to %02d/%02d/%04d %02d:%02d:%02d ***"), dia, mes, ano, hora, minuto, segundo);
 
   TimeElements T = {(uint8_t)segundo, (uint8_t)minuto, (uint8_t)hora, (uint8_t)0, (uint8_t)dia, (uint8_t)mes, (uint8_t)CalendarYrToTm(ano)};
-  t = makeTime(T);
+  tNow = makeTime(T);
 
-  debug_print(PSTR("Converted time is %ld"), t);
+  debug_print(PSTR("Converted time is %ld"), tNow);
     
-  int EhHorarioDeVerao = ehHorarioDeVerao(t, month(t), year(t));
+  int EhHorarioDeVerao = ehHorarioDeVerao(tNow, month(tNow), year(tNow));
   if (EhHorarioDeVerao)
    {
-    t -= SECS_PER_HOUR;
+    tNow -= SECS_PER_HOUR;
     debug_print(PSTR("ehHorarioDeVerao returned true"));
    }
 
-  setTime(t);
-  setDS3231time (second(t), minute(t), hour(t), weekday(t), day(t), month(t), year(t) - Y2KMARKFIX);
+  setTime(tNow);
+  setDS3231time (second(tNow), minute(tNow), hour(tNow), weekday(tNow), day(tNow), month(tNow), year(tNow) - Y2KMARKFIX);
 
   info_print(PSTR("!!! Ok !!!"));
 
@@ -129,11 +126,11 @@ void timerlet ( Task *me )
 {
   debug_print(PSTR("Running timerlet()..."));
   
-  time_t t = now();
+  time_t tNow = now();
   time_t rtc = getTimeFromRTC();
   time_t source = getDateFromSource();
 
-  debug_print(PSTR("now(): %ld source: %ld rtc: %ld"), t, source, rtc);
+  debug_print(PSTR("now(): %ld source: %ld rtc: %ld"), tNow, source, rtc);
 
   if ( rtc < source  )
   {
@@ -151,20 +148,20 @@ void tasklet ( Task *me )
 {
   debug_print(PSTR("Running tasklet()..."));
 
-  time_t t = now();
-  debug_print(PSTR("Now in time_t: %ld"), t);
+  time_t tNow = now();
+  debug_print(PSTR("Now in time_t: %ld"), tNow);
   
-  const int Year = year(t);
-  const int Month = month(t);
+  const int Year = year(tNow);
+  const int Month = month(tNow);
   debug_print(PSTR("Date: %02d/%04d"), Month, Year);
 
-  const int EhHorarioDeVerao = ehHorarioDeVerao(t, Month, Year);
+  const int EhHorarioDeVerao = ehHorarioDeVerao(tNow, Month, Year);
   debug_print(PSTR("EhHorarioDeVerao: %d"),EhHorarioDeVerao);
 
-  t += EhHorarioDeVerao * SECS_PER_HOUR;
+  tNow += EhHorarioDeVerao * SECS_PER_HOUR;
 
-  const int Hour = hour(t);
-  const int Minute = minute(t);
+  const int Hour = hour(tNow);
+  const int Minute = minute(tNow);
   debug_print(PSTR("Hour: %02d:%02d"), Hour, Minute);
   
   const byte Flag = pgm_read_byte (&(timertable[Hour][Minute/TIMERTABLESPLITMIN]));
@@ -202,7 +199,7 @@ void tasklet ( Task *me )
     }
   }
 
-  unsigned int drift = t % (POOLINGTIME/MSECS_PER_SEC);
+  unsigned int drift = tNow % (POOLINGTIME/MSECS_PER_SEC);
   if (drift)
   {
     int period = (POOLINGTIME/MSECS_PER_SEC) - drift;

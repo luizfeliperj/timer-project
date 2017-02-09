@@ -60,7 +60,7 @@ class Relay : public DelayRun {
     }
 
     static boolean Click ( Task* task ) {
-      Relay *r = (static_cast<Relay*>(task));
+      Relay *r = static_cast<Relay*>(task);
 
       debug_print(PSTR("Property tries is %d, mode is %d"), r->prop.tries, r->prop.mode);
 
@@ -99,7 +99,7 @@ class TimerFixer : public DelayRun {
     /* Funcao auxiliar para corrigir a execucao do callback a cada hora cheia */
     static boolean timerFixer ( Task* task )
     {
-      TimerFixer *t = (static_cast<TimerFixer*>(task));
+      TimerFixer *t = static_cast<TimerFixer*>(task);
       debug_print(PSTR("Running TimerFixer() for %04x"), t->target);
       t->target->lastCallTimeMicros = micros();
       
@@ -111,7 +111,6 @@ class TimerFixer : public DelayRun {
     TimerFixer (unsigned long delayMs, Task *target) : DelayRun (delayMs, timerFixer) { this->target = target; this->startDelayed(); }
     ~TimerFixer()
     { debug_print(PSTR("TimerFixer() going down for %04x"), this->target); }
-    
 };
 
 /* Classe que ajusta o timer para terminar sempre em hora cheia */
@@ -124,57 +123,49 @@ class RTCSyncer : public DelayRun {
     /* Funcao auxiliar para corrigir a execucao do callback a cada hora cheia */
     static boolean sync ( Task* task )
     {
-      RTCSyncer *syncer = (static_cast<RTCSyncer*>(task));
-      debug_print(PSTR("Running RTCSyncer() for %04x"), syncer->target);
+      RTCSyncer *syncer = static_cast<RTCSyncer*>(task);
 
       syncer->tries++;
+      debug_print(PSTR("Running RTCSyncer() for %04x, property tries: %d"), syncer->target, syncer->tries);
+
+      time_t tNow = now();
       syncer->times[syncer->tries] = getTimeFromRTC();
 
-      if (syncer->tries >= TIMESAMPLES) {
-
-        if (!syncer->isRTCSane())
-          syncer->setRTCSane();
-        
+      if (syncer->tries >= TIMESAMPLES)
+      {
+        if (syncer->isRTCSane())
+        {
+          time_t rtc = syncer->times[TIMESAMPLES-1];
+          if ( abs(tNow - rtc) > 1)
+          {
+            setTime(rtc);
+            syncer->doDrift(syncer->times[0]);
+            debug_print(PSTR("setTime to %ld"), rtc);
+          }
+        }
         delete syncer;
       }
+      else
+      {
+        syncer->startDelayed();
+      }
 
-      syncer->startDelayed();
       return true;
     }
 
     bool isRTCSane ()
     {
-      int i;
-      time_t rtc;
-      time_t last = times[0];
-
-      for (i = 1; i < TIMESAMPLES; i++)
+      for (int i = 1; i < TIMESAMPLES; i++)
       {
-        if ( (times[i] <= last) || (times[i] >= ( 2 * (TIMESAMPLEMSEC/MSECS_PER_SEC))) )
+        if ((times[i] - times[i-1]) != 1)
+        {
+          debug_print(PSTR("isRTCSane time diff != 1"));
           return false;
-
-        last = times[i];
+        }
       }
 
-      rtc = times[TIMESAMPLES-1];
-
-      if ( abs(now() - rtc) > 1)
-        setTime(rtc);
-
-      doDrift(times[0]);
-
+      debug_print(PSTR("isRTCSane is true"));
       return true;
-    }
-
-    void setRTCSane ()
-    {
-      time_t t = now();
-      time_t source = getDateFromSource();
-
-      if ( source > t)
-        t = source;
-      
-      setDS3231time (second(t), minute(t), hour(t), weekday(t), day(t), month(t), year(t) - Y2KMARKFIX);
     }
 
     void doDrift(time_t t)
@@ -184,7 +175,7 @@ class RTCSyncer : public DelayRun {
       {
         int period = (TIMESYNCING/MSECS_PER_SEC) - drift;
         new TimerFixer ((period * MSECS_PER_SEC) - MSECS_PER_SEC/4, target);
-        debug_print(PSTR("timerlet Need to drift %d seconds"), period);
+        debug_print(PSTR("RTCSyncer need to drift %d seconds"), period);
       }
     }
 
@@ -194,11 +185,11 @@ class RTCSyncer : public DelayRun {
       this->times[0] = t;
       this->target = target;
       this->startDelayed();
+      debug_print(PSTR("New instance of RTCSyncer() on %04x"), this->target);
     }
 
     ~RTCSyncer()
     { debug_print(PSTR("RTCSyncer() going down for %04x"), this->target); }
-    
 };
 
 /* Retorna o domingo de páscoa de um determinado ano */
@@ -447,7 +438,7 @@ uint16_t get_next_count(const uint8_t increment = 0)
   return count;
 }
 
-/* timestamp da data de compilacao */
+/* pega o timestamp da data de compilacao */
 time_t getDateFromSource()
 {
   time_t t;
