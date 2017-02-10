@@ -3,26 +3,61 @@
 /* Template utilizado para montar mensagens de debug */
 template<class T> int debug_print_hlp (uint8_t enabled, const __FlashStringHelper* file, const int line, const T fmt, ...)
 {
-  int r;
   va_list args;
-  char *lpBuffer, buffer[MAXSTRINGBUFFER];
+  char *pBuffer, buffer[MAXSTRINGBUFFER];
 
   if (enabled == MODEOFF)
     return 0;
 
   strcpy_P (buffer, (const char *) file);
-  lpBuffer = buffer + strlen(buffer);
-  r = snprintf_P (lpBuffer, sizeof(buffer) - strlen(buffer), PSTR(":%d "), line);
+  pBuffer = buffer + strlen(buffer);
+  pBuffer += snprintf_P (pBuffer, sizeof(buffer) - strlen(buffer), PSTR(":%d "), line);
 
   va_start (args, fmt);
-  lpBuffer += r;
-  r += vsnprintf_P(lpBuffer, sizeof(buffer) - strlen(buffer), (const char *) fmt, args);
+  pBuffer += vsnprintf_P(pBuffer, sizeof(buffer) - strlen(buffer), (const char *) fmt, args);
   va_end(args);
 
   Serial.println(buffer);
 
-  return r;
+  return pBuffer - buffer;
 }
+
+/* Classe que ajusta o timer para terminar sempre em hora cheia */
+class TimerFixer : public DelayRun
+{
+  private:
+    Task *target;
+    uint32_t lastMicros;
+
+    /* Funcao auxiliar para corrigir a execucao do callback a cada hora cheia */
+    static boolean timerFixer ( Task* task )
+    {
+      TimerFixer *tFixer = static_cast<TimerFixer*>(task);
+      debug_print(PSTR("Running TimerFixer() for 0x%04x"), tFixer->target);
+
+      if ( tFixer->lastMicros == 0 )
+      {
+        tFixer->delayMs = MSECS_PER_SEC;
+        tFixer->lastMicros = micros();
+        tFixer->startDelayed();
+        return true;
+      }
+
+      tFixer->target->lastCallTimeMicros = tFixer->lastMicros;
+      delete tFixer;
+      return true;
+    }
+
+  public:
+    ~TimerFixer()
+    { debug_print(PSTR("TimerFixer() going down for 0x%04x"), this); }
+    TimerFixer (Task *target, uint32_t delayMs) : DelayRun (delayMs, timerFixer) {
+      this->target = target;
+      this->lastMicros = 0;
+      this->startDelayed();
+      debug_print(PSTR("New instance of TimerFixer() on 0x%04x"), this);
+    }
+};
 
 /* Classe que empacota as operacoes do rele */
 class Relay : public DelayRun
@@ -36,14 +71,14 @@ class Relay : public DelayRun
     } prop;
 
   private:
-    boolean turnOn () {
+    boolean turnOn() {
       debug_print(PSTR("Turning on relay %d"), this->prop.pin);
 
       digitalWrite (this->prop.pin, LOW);
       return true;
     }
 
-    boolean turnOff () {
+    boolean turnOff() {
       debug_print(PSTR("Turning off relay %d"), this->prop.pin);
 
       digitalWrite (this->prop.pin, HIGH);
@@ -61,58 +96,39 @@ class Relay : public DelayRun
     }
 
     static boolean Click ( Task* task ) {
-      Relay *r = static_cast<Relay*>(task);
+      Relay *relay = static_cast<Relay*>(task);
 
-      debug_print(PSTR("Property tries is %d, mode is %d"), r->prop.tries, r->prop.mode);
+      debug_print(PSTR("Property tries is %d, mode is %d"), relay->prop.tries, relay->prop.mode);
 
-      switch (r->prop.mode) {
+      switch (relay->prop.mode) {
         case MODEON:
-          r->turnOn();
+          relay->turnOn();
           break;;
         
         case MODEOFF:
         default:
-          r->turnOff();
-          r->prop.tries--;
+          relay->turnOff();
+          relay->prop.tries--;
           break;;
       }
 
-      r->prop.mode = (r->prop.mode + 1) & 0x1;
+      relay->prop.mode = (relay->prop.mode + 1) & 0x1;
       
-      if (r->prop.tries) {
-        r->startDelayed();
+      if (relay->prop.tries) {
+        relay->startDelayed();
       } else {
-        delete r;
+        delete relay;
       }
     }
     
   public:
-    Relay (unsigned long delayMs, int pin) : DelayRun (delayMs, Click) { this->prop.pin = pin; this->pressButton();}
     ~Relay()
-    { debug_print(PSTR("Relay() going down for %04x"), this); }
-};
-
-/* Classe que ajusta o timer para terminar sempre em hora cheia */
-class TimerFixer : public DelayRun
-{
-  private:
-    Task *target;
-
-    /* Funcao auxiliar para corrigir a execucao do callback a cada hora cheia */
-    static boolean timerFixer ( Task* task )
-    {
-      TimerFixer *t = static_cast<TimerFixer*>(task);
-      debug_print(PSTR("Running TimerFixer() for %04x"), t->target);
-      t->target->lastCallTimeMicros = micros();
-      
-      delete t;
-      return true;
+    { debug_print(PSTR("Relay() going down for 0x%04x"), this); }
+    Relay (int pin, unsigned long delayMs) : DelayRun (delayMs, Click) {
+      this->prop.pin = pin;
+      this->pressButton();
+      debug_print(PSTR("New instance of Relay() on 0x%04x"), this);
     }
-
-  public:
-    TimerFixer (unsigned long delayMs, Task *target) : DelayRun (delayMs, timerFixer) { this->target = target; this->startDelayed(); }
-    ~TimerFixer()
-    { debug_print(PSTR("TimerFixer() going down for %04x"), this->target); }
 };
 
 /* Classe que ajusta o timer para terminar sempre em hora cheia */
@@ -120,80 +136,71 @@ class RTCSyncer : public DelayRun
 {
   private:
     Task *target;
-    uint8_t tries;
     time_t times[TIMESAMPLES];
+    uint8_t tries;
 
     /* Funcao auxiliar para corrigir a execucao do callback a cada hora cheia */
-    static boolean sync ( Task* task )
+    static boolean rtcSyncer ( Task* task )
     {
+      time_t tNow = now();
+      time_t rtc = getTimeFromRTC();
       RTCSyncer *syncer = static_cast<RTCSyncer*>(task);
 
-      syncer->tries++;
-      debug_print(PSTR("Running RTCSyncer() for %04x, property tries: %d"), syncer->target, syncer->tries);
+      debug_print(PSTR("Running RTCSyncer() for 0x%04x, property tries: %d"), syncer->target, syncer->tries);
 
-      time_t tNow = now();
-      syncer->times[syncer->tries] = getTimeFromRTC();
-
-      if (syncer->tries >= TIMESAMPLES)
+      if (syncer->tries < TIMESAMPLES)
       {
-        if (syncer->isRTCSane())
-        {
-          time_t rtc = syncer->times[TIMESAMPLES-1];
-          if ( abs(tNow - rtc) > 1)
-          {
-            setTime(rtc);
-            syncer->doDrift(syncer->times[0]);
-            debug_print(PSTR("setTime to %ld"), rtc);
-          }
-        }
-        delete syncer;
-      }
-      else
-      {
+        syncer->times[syncer->tries] = rtc;
         syncer->startDelayed();
+        syncer->tries++;
+        return true;
       }
 
+      if (!(syncer->isRTCSane()))
+      {
+        delete syncer;
+        return false;
+      }
+
+      int diff = abs(tNow - rtc);
+      if ( diff )
+      {
+        setTime(rtc);
+        debug_print(PSTR("System time adjusted in %d seconds"), diff);
+      }
+
+      doDrift(syncer->target, syncer->times[0], TIMESYNCING);
+      delete syncer;
       return true;
     }
 
-    bool isRTCSane ()
+    bool isRTCSane()
     {
       for (int i = 1; i < TIMESAMPLES; i++)
       {
-        if ((times[i] - times[i-1]) != 1)
+        int diff = times[i] - times[i-1];
+        if (diff != 1)
         {
-          debug_print(PSTR("isRTCSane time diff != 1"));
+          debug_print(PSTR("time diff != 1, %d"), diff);
           return false;
         }
       }
 
-      debug_print(PSTR("isRTCSane is true"));
+      debug_print(PSTR("RTC is sane"));
       return true;
     }
 
-    void doDrift(time_t t)
-    {
-      unsigned int drift = t % (TIMESYNCING/MSECS_PER_SEC);
-      if (drift)
-      {
-        int period = (TIMESYNCING/MSECS_PER_SEC) - drift;
-        new TimerFixer ((period * MSECS_PER_SEC) - MSECS_PER_SEC/4, target);
-        debug_print(PSTR("RTCSyncer need to drift %d seconds"), period);
-      }
-    }
-
   public:
-    RTCSyncer (unsigned long delayMs, time_t t, Task *target) : DelayRun (delayMs, sync)
+    ~RTCSyncer()
+    { debug_print(PSTR("RTCSyncer() going down for 0x%04x"), this); }
+    RTCSyncer (time_t tNow, Task *target, unsigned long delayMs) : DelayRun (delayMs, rtcSyncer)
     {
       this->tries = 1;
-      this->times[0] = t;
+      this->times[0] = tNow;
       this->target = target;
       this->startDelayed();
-      debug_print(PSTR("New instance of RTCSyncer() on %04x"), this->target);
+      debug_print(PSTR("New instance of RTCSyncer() on 0x%04x"), this);
     }
-
-    ~RTCSyncer()
-    { debug_print(PSTR("RTCSyncer() going down for %04x"), this->target); }
 };
 
 /* Retorna o domingo de páscoa de um determinado ano */
@@ -259,7 +266,7 @@ byte bcdToDec(const byte val)
 { return( (val/16*10) + (val%16) ); }
 
 /* Set RTC timer */
-void setDS3231time(const byte second, const byte minute, const byte hour, const byte dayOfWeek, const byte dayOfMonth, const byte month, const byte year)
+void setDS3231time(const uint8_t second, const uint8_t minute, const uint8_t hour, const uint8_t dayOfWeek, const uint8_t dayOfMonth, const uint8_t month, const uint8_t year)
 {
   // sets time and date data to DS3231
   Wire.beginTransmission(DS3231_I2C_ADDRESS);
@@ -275,7 +282,7 @@ void setDS3231time(const byte second, const byte minute, const byte hour, const 
 }
 
 /* Read RTC timer */
-void readDS3231time(byte *second, byte *minute, byte *hour, byte *dayOfWeek, byte *dayOfMonth, byte *month, byte *year)
+void readDS3231time(uint8_t *second, uint8_t *minute, uint8_t *hour, uint8_t *dayOfWeek, uint8_t *dayOfMonth, uint8_t *month, uint8_t *year)
 {
   Wire.beginTransmission(DS3231_I2C_ADDRESS);
   Wire.write(0); // set DS3231 register pointer to 00h
@@ -296,66 +303,64 @@ void readDS3231time(byte *second, byte *minute, byte *hour, byte *dayOfWeek, byt
 /* Funcao que empacota a tomada do horario do RTC e convertem em time_t */
 const time_t getTimeFromRTC()
 {
-  char buffer[MAXSTRINGBUFFER], *lpBuffer = buffer;
-  int szwrote, buffersz = sizeof(buffer);
-  byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
+  char buffer[MAXSTRINGBUFFER], *pBuffer = buffer;
+  uint16_t szwrote, buffersz = MAXSTRINGBUFFER;
+  uint8_t second, minute, hour, dayOfWeek, dayOfMonth, month, year;
   
   // retrieve data from DS3231
   readDS3231time(&second, &minute, &hour, &dayOfWeek, &dayOfMonth, &month, &year);
 
   #ifdef ENABLE_DEBUG
   // send it to the serial monitor
-  szwrote = snprintf_P (lpBuffer, buffersz, PSTR("%02d:%02d:%02d %02d/%02d/%02d Day of week: "), hour, minute, second, dayOfMonth, month, year);
-  lpBuffer += szwrote;
+  szwrote = snprintf_P (pBuffer, buffersz, PSTR("%02d:%02d:%02d %02d/%02d/%02d Day of week: "), hour, minute, second, dayOfMonth, month, year);
+  pBuffer += szwrote;
   buffersz -= szwrote;
   
   switch(dayOfWeek){
   case 1:
-    szwrote = snprintf_P (lpBuffer, buffersz, PSTR("Sunday"));
+    szwrote = snprintf_P (pBuffer, buffersz, PSTR("Sunday"));
     break;
   case 2:
-    szwrote = snprintf_P (lpBuffer, buffersz, PSTR("Monday"));
+    szwrote = snprintf_P (pBuffer, buffersz, PSTR("Monday"));
     break;
   case 3:
-    szwrote = snprintf_P (lpBuffer, buffersz, PSTR("Tuesday"));
+    szwrote = snprintf_P (pBuffer, buffersz, PSTR("Tuesday"));
     break;
   case 4:
-    szwrote = snprintf_P (lpBuffer, buffersz, PSTR("Wednesday"));
+    szwrote = snprintf_P (pBuffer, buffersz, PSTR("Wednesday"));
     break;
   case 5:
-    szwrote = snprintf_P (lpBuffer, buffersz, PSTR("Thursday"));
+    szwrote = snprintf_P (pBuffer, buffersz, PSTR("Thursday"));
     break;
   case 6:
-    szwrote = snprintf_P (lpBuffer, buffersz, PSTR("Friday"));
+    szwrote = snprintf_P (pBuffer, buffersz, PSTR("Friday"));
     break;
   case 7:
-    szwrote = snprintf_P (lpBuffer, buffersz, PSTR("Saturday"));
+    szwrote = snprintf_P (pBuffer, buffersz, PSTR("Saturday"));
     break;
   default:
-    szwrote = snprintf_P (lpBuffer, buffersz, PSTR("Invalid"));
+    szwrote = snprintf_P (pBuffer, buffersz, PSTR("Invalid"));
   }
   
-  lpBuffer += szwrote;
+  pBuffer += szwrote;
   buffersz -= szwrote;
   
   debug_print(PSTR("%s"), buffer)
   #endif // ENABLE_DEBUG
 
   TimeElements T = {(uint8_t)second, (uint8_t)minute, (uint8_t)hour, (uint8_t)0, (uint8_t)dayOfMonth, (uint8_t)month, (uint8_t)y2kYearToTm(year)};
-  const time_t t = makeTime(T);
-  
-  return t;
+  return makeTime(T);
 }  
 
 /* Funcao que empacota a verificacao de se o horario corrente eh horario de verao */
-int ehHorarioDeVerao(const time_t now, const int Month, const int Year)
+int ehHorarioDeVerao(const time_t tNow, const uint8_t Month, const uint16_t Year)
 {
   if (cacheEhHorarioDeVerao.year != Year)
   {
-    debug_print(PSTR("Fazendo cache do calculo do horario de verao"));
-    cacheEhHorarioDeVerao.inicio = InicioHorarioVerao(Year);
-    cacheEhHorarioDeVerao.fim = TerminoHorarioVerao(Year-1);
     cacheEhHorarioDeVerao.year = Year;
+    cacheEhHorarioDeVerao.fim = TerminoHorarioVerao(Year-1);
+    cacheEhHorarioDeVerao.inicio = InicioHorarioVerao(Year);
+    debug_print(PSTR("Fazendo cache do calculo do horario de verao"));
   }
   else
   { debug_print(PSTR("Usando horario de verao em cache")); }
@@ -365,7 +370,7 @@ int ehHorarioDeVerao(const time_t now, const int Month, const int Year)
   {
     const time_t Inicio = cacheEhHorarioDeVerao.inicio;
     debug_print(PSTR("Inicio do horario de Verao: %lu"), Inicio);
-    if ( now >= Inicio ) {
+    if ( tNow >= Inicio ) {
       horarioDeVerao = 1;
       debug_print(PSTR("Eh Horario de Verao"));
     }
@@ -376,7 +381,7 @@ int ehHorarioDeVerao(const time_t now, const int Month, const int Year)
   {
     const time_t Fim = cacheEhHorarioDeVerao.fim;
     debug_print(PSTR("Fim do horario de Verao: %lu"), Fim);
-    if ( (now + SECS_PER_HOUR) < Fim ) {
+    if ( (tNow + SECS_PER_HOUR) < Fim ) {
       horarioDeVerao = 1;
       debug_print(PSTR("Eh Horario de Verao"));
     }
@@ -388,14 +393,13 @@ int ehHorarioDeVerao(const time_t now, const int Month, const int Year)
 }
 
 /* Funcao de ajuda para imprimir o horario corrente */
-void printcurrentdate(time_t t)
+void printcurrentdate(time_t tNow)
 {
-  if (ehHorarioDeVerao(t, month(t), year(t)))
-  {
-    t += SECS_PER_HOUR;
-  }
+  if (ehHorarioDeVerao(tNow, month(tNow), year(tNow)))
+    tNow += SECS_PER_HOUR;
     
-  int ano = year(t), mes = month(t), dia = day(t), hora = hour(t), minuto = minute(t), segundo = second(t);
+  uint16_t ano = year(tNow);
+  uint8_t mes = month(tNow), dia = day(tNow), hora = hour(tNow), minuto = minute(tNow), segundo = second(tNow);
   info_print(PSTR("*** now() is %02d/%02d/%04d %02d:%02d:%02d ***"), dia, mes, ano, hora, minuto, segundo);
 
   return;
@@ -447,12 +451,13 @@ time_t getDateFromSource()
 {
   time_t t;
   char Month[4];
+  uint16_t Year = 0;
   char buffer[MAXSTRINGBUFFER];
-  int m = 0, Day = 0, Year = 0, Hour = 0, Minute = 0, Second = 0;
   const char *today = PSTR(__TIMESTAMP__);
+  uint8_t m = 0, Day = 0, Hour = 0, Minute = 0, Second = 0;
 
   strncpy_P(buffer, today, MAXSTRINGBUFFER);
-  sscanf_P (buffer, PSTR("%*3s %3s %d %d %d:%d:%d"), Month, &Day, &Year, &Hour, &Minute, &Second);
+  sscanf_P (buffer, PSTR("%*3s %3s %02d %04d %02d:%02d:%02d"), Month, &Day, &Year, &Hour, &Minute, &Second);
   
   switch (Month[0]) {
     case 'J': m = Month[1] == 'a' ? 1 : m = Month[2] == 'n' ? 6 : 7; break;
@@ -468,4 +473,17 @@ time_t getDateFromSource()
 
   TimeElements T = {(uint8_t)Second, (uint8_t)Minute, (uint8_t)Hour, (uint8_t)0, (uint8_t)Day, (uint8_t)m, (uint8_t)CalendarYrToTm(Year)};
   return makeTime(T);
+}
+
+/* Ajusta o proximo timer para uma hora cheia */
+void doDrift(Task *target, time_t tNow, uint32_t rounding)
+{
+  uint16_t drift = tNow % (rounding/MSECS_PER_SEC);
+
+  if (!drift)
+    return;
+
+  uint16_t period = (rounding/MSECS_PER_SEC) - drift;
+  new TimerFixer (target, (period * MSECS_PER_SEC));
+  debug_print(PSTR("doDrift need to drift %d seconds for 0x%04x"), period, target);
 }

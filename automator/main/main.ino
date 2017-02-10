@@ -23,7 +23,7 @@
 #define PIN_RELAY1         17
 #define PIN_RELAY2         16
 #define MONTHSPERAYEAR     12
-#define MAXSTRINGBUFFER    128
+#define MAXSTRINGBUFFER    64
 #define BAUDRATE           9600L
 #define Y2KMARKFIX         2000L
 #define MSECS_PER_SEC      1000UL
@@ -60,8 +60,8 @@ uint8_t debugenabled = ENABLE_DEBUG;
 #define info_print(fmt, ...) debug_print_hlp(true, F(__FILENAME__), __LINE__, fmt, ##__VA_ARGS__);
 
 struct {
-  int year;
   time_t inicio, fim;
+  int year;
 } cacheEhHorarioDeVerao;
 
 uint16_t get_next_count(const uint8_t);
@@ -71,22 +71,20 @@ void setup() {
   // put your setup code here, to run once:
   wdt_disable();
 
-  Wire.begin();
-
-  Serial.begin(BAUDRATE);
-  Serial.setTimeout(SERIALTIMEOUT);
-  
-  lcd.setBacklightPin(BACKLIGHT_PIN,POSITIVE);
-  lcd.setBacklight(HIGH);
-  lcd.home ();
-
   digitalWrite (PIN_RELAY1, HIGH);
   pinMode( PIN_RELAY1, OUTPUT );
 
   digitalWrite (PIN_RELAY2, HIGH);
   pinMode( PIN_RELAY2, OUTPUT );
 
-  memset (&cacheEhHorarioDeVerao, 0, sizeof(cacheEhHorarioDeVerao));
+  Serial.begin(BAUDRATE);
+  Serial.setTimeout(SERIALTIMEOUT);
+
+  Wire.begin();
+
+  lcd.setBacklightPin(BACKLIGHT_PIN,POSITIVE);
+  lcd.setBacklight(HIGH);
+  lcd.home ();
 
   /* Primeiro ajusta o horario da libc */
   SoftTimer.add (new Task (TIMESYNCING, timerlet));
@@ -94,11 +92,10 @@ void setup() {
   /* Segundo, faz o que tem que fazer */
   SoftTimer.add (new Task (POOLINGTIME, tasklet));
 
-  /* Terceiro, atualiza o display */
-  SoftTimer.add (new Task (MSECS_PER_SEC, displayer));
-
-  /* Quarto, gera uma task para zerar o watchdog */
+  /* Terceiro, gera uma task para zerar o watchdog e atualizar display*/
   SoftTimer.add (new Task (MSECS_PER_SEC, watchdogger));
+
+  memset (&cacheEhHorarioDeVerao, 0, sizeof(cacheEhHorarioDeVerao));
 
   wdt_enable(WDTO_2S);
 
@@ -107,5 +104,5 @@ void setup() {
 
 void SerialEvent() {
   /* Se houver um SerialEvent, verifica por pedidos na serial */
-  SoftTimer.add (new Task (0, seriallet));
+  SoftTimer.add (new Task (0, serialtask));
 }
