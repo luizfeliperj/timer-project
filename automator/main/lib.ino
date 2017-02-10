@@ -25,7 +25,8 @@ template<class T> int debug_print_hlp (uint8_t enabled, const __FlashStringHelpe
 }
 
 /* Classe que empacota as operacoes do rele */
-class Relay : public DelayRun {
+class Relay : public DelayRun
+{
   protected:
     
     struct {
@@ -92,7 +93,8 @@ class Relay : public DelayRun {
 };
 
 /* Classe que ajusta o timer para terminar sempre em hora cheia */
-class TimerFixer : public DelayRun {
+class TimerFixer : public DelayRun
+{
   private:
     Task *target;
 
@@ -114,7 +116,8 @@ class TimerFixer : public DelayRun {
 };
 
 /* Classe que ajusta o timer para terminar sempre em hora cheia */
-class RTCSyncer : public DelayRun {
+class RTCSyncer : public DelayRun
+{
   private:
     Task *target;
     uint8_t tries;
@@ -180,7 +183,8 @@ class RTCSyncer : public DelayRun {
     }
 
   public:
-    RTCSyncer (unsigned long delayMs, time_t t, Task *target) : DelayRun (delayMs, sync) {
+    RTCSyncer (unsigned long delayMs, time_t t, Task *target) : DelayRun (delayMs, sync)
+    {
       this->tries = 1;
       this->times[0] = t;
       this->target = target;
@@ -299,7 +303,7 @@ const time_t getTimeFromRTC()
   // retrieve data from DS3231
   readDS3231time(&second, &minute, &hour, &dayOfWeek, &dayOfMonth, &month, &year);
 
- #ifdef ENABLE_DEBUG
+  #ifdef ENABLE_DEBUG
   // send it to the serial monitor
   szwrote = snprintf_P (lpBuffer, buffersz, PSTR("%02d:%02d:%02d %02d/%02d/%02d Day of week: "), hour, minute, second, dayOfMonth, month, year);
   lpBuffer += szwrote;
@@ -335,7 +339,7 @@ const time_t getTimeFromRTC()
   buffersz -= szwrote;
   
   debug_print(PSTR("%s"), buffer)
-#endif // ENABLE_DEBUG
+  #endif // ENABLE_DEBUG
 
   TimeElements T = {(uint8_t)second, (uint8_t)minute, (uint8_t)hour, (uint8_t)0, (uint8_t)dayOfMonth, (uint8_t)month, (uint8_t)y2kYearToTm(year)};
   const time_t t = makeTime(T);
