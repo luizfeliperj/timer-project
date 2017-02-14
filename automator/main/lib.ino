@@ -1,7 +1,7 @@
 #undef __FILENAME__
 #define __FILENAME__ "lib"
-/* Template utilizado para montar mensagens de debug */
-template<class T> int debug_print_hlp (uint8_t enabled, const __FlashStringHelper* file, const int line, const T fmt, ...)
+/* Funcao de ajuda para montar mensagens de debug */
+int debug_print_hlp (uint8_t enabled, const __FlashStringHelper* file, const int line, const char *fmt, ...)
 {
   va_list args;
   char *pBuffer, buffer[MAXSTRINGBUFFER];
@@ -14,7 +14,7 @@ template<class T> int debug_print_hlp (uint8_t enabled, const __FlashStringHelpe
   pBuffer += snprintf_P (pBuffer, sizeof(buffer) - strlen(buffer), PSTR(":%d "), line);
 
   va_start (args, fmt);
-  pBuffer += vsnprintf_P(pBuffer, sizeof(buffer) - strlen(buffer), (const char *) fmt, args);
+  pBuffer += vsnprintf_P(pBuffer, sizeof(buffer) - strlen(buffer), fmt, args);
   va_end(args);
 
   Serial.println(buffer);

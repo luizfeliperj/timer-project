@@ -13,11 +13,11 @@ void watchdogger ( Task *task )
   uint16_t hours = uptime%(24L*60L*60L);
 
   lcd.setCursor (0,0);
-  sprintf (buffer, "%02d/%02d/%02d %02d:%02d", day(tNow), month(tNow), year(tNow) - 1900, hour(tNow), minute(tNow));
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %02d:%02d"), day(tNow), month(tNow), year(tNow) - 1900, hour(tNow), minute(tNow));
   lcd.print(buffer);
 
   lcd.setCursor (0,1);
-  sprintf (buffer, "%05d %01dd%02d:%02d:%02d", boot_count, days, (hours / 3600), ((hours % 3600) / 60), (hours % 60));
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%05d %01dd%02d:%02d:%02d"), boot_count, days, (hours / 3600), ((hours % 3600) / 60), (hours % 60));
   lcd.print(buffer);
 
   wdt_reset();
