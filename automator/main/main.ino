@@ -41,15 +41,8 @@
 #define EEPROMCELLSTOUSE   128
 #define DS3231_I2C_ADDRESS 0x68
 #define DATETIMESTRINGLEN  sizeof("YYYYMMDDHHMMSS") - 1
-#define I2C_ADDR    0x3F // <<----- Add your address here.  Find it from I2C Scanner
-#define BACKLIGHT_PIN     3
-#define En_pin  2
-#define Rw_pin  1
-#define Rs_pin  0
-#define D4_pin  4
-#define D5_pin  5
-#define D6_pin  6
-#define D7_pin  7
+#define BACKLIGHT_PIN      3
+#define LCD_I2C_ADDRESS    0x3F
 
 #ifdef ENABLE_DEBUG
 uint8_t debugenabled = ENABLE_DEBUG;
@@ -61,48 +54,51 @@ uint8_t debugenabled = ENABLE_DEBUG;
 
 struct {
   time_t inicio, fim;
-  int year;
+  uint16_t year;
 } cacheEhHorarioDeVerao;
 
+uint16_t boot_count;
 uint16_t get_next_count(const uint8_t);
-LiquidCrystal_I2C  lcd(I2C_ADDR, En_pin, Rw_pin, Rs_pin, D4_pin, D5_pin, D6_pin, D7_pin);
+LiquidCrystal_I2C lcd(LCD_I2C_ADDRESS, 2, 1, 0, 4, 5, 6, 7);
 
 void setup() {
   // put your setup code here, to run once:
   wdt_disable();
 
   digitalWrite (PIN_RELAY1, HIGH);
-  pinMode( PIN_RELAY1, OUTPUT );
+  pinMode(PIN_RELAY1, OUTPUT);
 
   digitalWrite (PIN_RELAY2, HIGH);
-  pinMode( PIN_RELAY2, OUTPUT );
+  pinMode(PIN_RELAY2, OUTPUT);
 
   Serial.begin(BAUDRATE);
   Serial.setTimeout(SERIALTIMEOUT);
 
   Wire.begin();
 
-  lcd.setBacklightPin(BACKLIGHT_PIN,POSITIVE);
+  lcd.setBacklightPin(BACKLIGHT_PIN, POSITIVE);
   lcd.setBacklight(HIGH);
-  lcd.home ();
+  lcd.home();
 
   /* Primeiro ajusta o horario da libc */
-  SoftTimer.add (new Task (TIMESYNCING, timerlet));
+  SoftTimer.add(new Task(TIMESYNCING, timerlet));
 
   /* Segundo, faz o que tem que fazer */
-  SoftTimer.add (new Task (POOLINGTIME, tasklet));
+  SoftTimer.add(new Task(POOLINGTIME, tasklet));
 
   /* Terceiro, gera uma task para zerar o watchdog e atualizar display*/
-  SoftTimer.add (new Task (MSECS_PER_SEC, watchdogger));
+  SoftTimer.add(new Task(MSECS_PER_SEC, watchdogger));
 
-  memset (&cacheEhHorarioDeVerao, 0, sizeof(cacheEhHorarioDeVerao));
+  memset(&cacheEhHorarioDeVerao, 0, sizeof(cacheEhHorarioDeVerao));
 
   wdt_enable(WDTO_2S);
 
-  debug_print(PSTR("End of setup process, boot count is %d"), get_next_count(1));
+  boot_count = get_next_count(1);
+
+  debug_print(PSTR("End of setup process, boot count is %d"), boot_count);
 }
 
 void SerialEvent() {
   /* Se houver um SerialEvent, verifica por pedidos na serial */
-  SoftTimer.add (new Task (0, serialtask));
+  SoftTimer.add(new Task(0, serialtask));
 }

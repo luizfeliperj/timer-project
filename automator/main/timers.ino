@@ -7,12 +7,17 @@ static BlinkTask led = BlinkTask(PIN_LED, LEDBLINKINTERVAL, LEDBLINKINTERVAL, LE
 void watchdogger ( Task *task )
 {
   char buffer[25];
+  time_t tNow = now();
   uint32_t uptime = millis()/MSECS_PER_SEC;
   uint16_t days = uptime/(24L*60L*60L);
   uint16_t hours = uptime%(24L*60L*60L);
 
-  sprintf (buffer, "Up: %02dd%02d:%02d:%02d", days, (hours / 3600), ((hours % 3600) / 60), (hours % 60));
+  lcd.setCursor (0,0);
+  sprintf (buffer, "%02d/%02d/%02d %02d:%02d", day(tNow), month(tNow), year(tNow) - 1900, hour(tNow), minute(tNow));
+  lcd.print(buffer);
+
   lcd.setCursor (0,1);
+  sprintf (buffer, "%05d %01dd%02d:%02d:%02d", boot_count, days, (hours / 3600), ((hours % 3600) / 60), (hours % 60));
   lcd.print(buffer);
 
   wdt_reset();
