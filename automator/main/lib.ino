@@ -451,13 +451,12 @@ time_t getDateFromSource()
 {
   time_t t;
   char Month[4];
-  uint16_t Year = 0;
   char buffer[MAXSTRINGBUFFER];
   const char *today = PSTR(__TIMESTAMP__);
-  uint8_t m = 0, Day = 0, Hour = 0, Minute = 0, Second = 0;
+  uint16_t m = 0, Year = 0, Day = 0, Hour = 0, Minute = 0, Second = 0;
 
   strncpy_P(buffer, today, MAXSTRINGBUFFER);
-  sscanf_P (buffer, PSTR("%*3s %3s %02d %04d %02d:%02d:%02d"), Month, &Day, &Year, &Hour, &Minute, &Second);
+  sscanf_P (buffer, PSTR("%*3s %3s %02d %02d:%02d:%02d %04d"), Month, &Day, &Hour, &Minute, &Second, &Year);
   
   switch (Month[0]) {
     case 'J': m = Month[1] == 'a' ? 1 : m = Month[2] == 'n' ? 6 : 7; break;

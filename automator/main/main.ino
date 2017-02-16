@@ -14,7 +14,7 @@
 #include <LiquidCrystal_I2C.h>
 
 /* DEBUG FLAGS */
-#define ENABLE_DEBUG MODEOFF
+#define ENABLE_DEBUG MODEON
 
 #define MODEON             1
 #define MODEOFF            0
@@ -75,7 +75,7 @@ void setup() {
   Serial.setTimeout(SERIALTIMEOUT);
 
   Wire.begin();
-
+  lcd.begin(16,2);
   lcd.setBacklightPin(BACKLIGHT_PIN, POSITIVE);
   lcd.setBacklight(HIGH);
   lcd.home();
@@ -89,16 +89,16 @@ void setup() {
   /* Terceiro, gera uma task para zerar o watchdog e atualizar display*/
   SoftTimer.add(new Task(MSECS_PER_SEC, watchdogger));
 
-  memset(&cacheEhHorarioDeVerao, 0, sizeof(cacheEhHorarioDeVerao));
+  /* Quarto, Corrige bug que o SoftTimer nao invoca o serialEventRun */
+  if (serialEventRun)
+    SoftTimer.add(new Task(0, serialEventRun));
 
   wdt_enable(WDTO_2S);
-
   boot_count = get_next_count(1);
-
   debug_print(PSTR("End of setup process, boot count is %d"), boot_count);
 }
 
-void SerialEvent() {
+void serialEvent() {
   /* Se houver um SerialEvent, verifica por pedidos na serial */
   SoftTimer.add(new Task(0, serialtask));
 }

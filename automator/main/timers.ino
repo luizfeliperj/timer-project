@@ -12,8 +12,13 @@ void watchdogger ( Task *task )
   uint16_t days = uptime/(24L*60L*60L);
   uint16_t hours = uptime%(24L*60L*60L);
 
+  if (lastState == MODEON) {
+    debug_print(PSTR("Mode is on, blink led"));
+    led.start();
+  }
+
   lcd.setCursor (0,0);
-  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %02d:%02d"), day(tNow), month(tNow), year(tNow) - 1900, hour(tNow), minute(tNow));
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %02d:%02d"), day(tNow), month(tNow), year(tNow), hour(tNow), minute(tNow));
   lcd.print(buffer);
 
   lcd.setCursor (0,1);
@@ -35,7 +40,7 @@ void timerlet ( Task *task )
 
   if ( rtc < source  )
   {
-    debug_print(PSTR("rtc time is inconsist, %ld > %ld. Using source time"), source, rtc);
+    debug_print(PSTR("rtc inconsist, %ld > %ld. Get source"), source, rtc);
     rtc = source;
   }
 
@@ -73,7 +78,6 @@ void tasklet ( Task *task )
       debug_print(PSTR("Making sure mode is off"));
       new Relay(PIN_RELAY2, PRESSBUTTONTIME);
     }
-  return;
 
     debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
     lastState = MODEOFF;
@@ -107,14 +111,11 @@ void tasklet ( Task *task )
 void serialtask ( Task *task )
 {
   time_t tNow = now();
-  time_t uptime = millis();
   char buffer[DATETIMESTRINGLEN + 1];
+  int uptime = millis()/MSECS_PER_SEC;
   int ano, mes, dia, hora, minuto, segundo;
 
-  if (lastState == MODEON) {
-    debug_print(PSTR("Mode is on, blink led"));
-    led.start();
-  }
+  SoftTimer.remove(task);
 
   if (!Serial)
     return;
@@ -139,10 +140,10 @@ void serialtask ( Task *task )
       info_print(PSTR("Compilado por Luiz Felipe Silva"));
       info_print(PSTR("Em " __TIMESTAMP__ ));
       info_print(PSTR("Uptime %d %02d:%02d:%02d"),
-          (uptime/MSECS_PER_SEC)  / SECS_PER_DAY,
-          ((uptime/MSECS_PER_SEC) % SECS_PER_DAY)  / SECS_PER_HOUR,
-          ((uptime/MSECS_PER_SEC) % SECS_PER_HOUR) / SECS_PER_MIN,
-          (uptime/MSECS_PER_SEC)  % SECS_PER_MIN );
+          (int)((uptime / SECS_PER_DAY)),
+          (int)((uptime % SECS_PER_DAY) / SECS_PER_HOUR),
+          (int)((uptime % SECS_PER_HOUR) / SECS_PER_MIN),
+          (int)(uptime % 60) );
       info_print(PSTR("Boot count: %d"), get_next_count());
       return;
 
@@ -194,7 +195,6 @@ void serialtask ( Task *task )
 
   info_print(PSTR("!!! Ok !!!"));
 
-  SoftTimer.remove(task);
   delete task;
   return;
 }
