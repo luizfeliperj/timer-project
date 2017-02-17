@@ -206,10 +206,10 @@ class RTCSyncer : public DelayRun
 class SerialTask : public Task {
   public:
     ~SerialTask() {
-      Softtimer.remove(this);
+      SoftTimer.remove(this);
       debug_print(PSTR("SerialTask() going down for 0x%04x"), this);
     }
-    SerialTask (Task *target) : Task (target) {
+    SerialTask (unsigned long periodMs, void (*callback)(Task*)) : Task (periodMs, callback) {
       debug_print(PSTR("New instance of SerialTask() on 0x%04x"), this);
     }
 };
@@ -496,4 +496,10 @@ void doDrift(Task *target, time_t tNow, uint32_t rounding)
   uint16_t period = (rounding/MSECS_PER_SEC) - drift;
   new TimerFixer (target, (period * MSECS_PER_SEC));
   debug_print(PSTR("doDrift need to drift %d seconds for 0x%04x"), period, target);
+}
+
+/* Atuar na serial por interrupcao ao invez de fazer pooling */
+void serialEvent() {
+  /* Se houver um SerialEvent, verifica por pedidos na serial */
+  SoftTimer.add(new SerialTask(0, serialtask));
 }

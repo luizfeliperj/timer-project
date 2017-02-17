@@ -97,8 +97,3 @@ void setup() {
   boot_count = get_next_count(1);
   debug_print(PSTR("End of setup process, boot count is %d"), boot_count);
 }
-
-void serialEvent() {
-  /* Se houver um SerialEvent, verifica por pedidos na serial */
-  SoftTimer.add(new SerialTask(0, serialtask));
-}
