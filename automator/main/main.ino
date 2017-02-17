@@ -100,5 +100,5 @@ void setup() {
 
 void serialEvent() {
   /* Se houver um SerialEvent, verifica por pedidos na serial */
-  SoftTimer.add(new Task(0, serialtask));
+  SoftTimer.add(new SerialTask(0, serialtask));
 }

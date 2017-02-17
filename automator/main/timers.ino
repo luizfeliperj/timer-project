@@ -81,7 +81,6 @@ void tasklet ( Task *task )
 
     debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
     lastState = MODEOFF;
-
     return;
   }
 
@@ -89,16 +88,13 @@ void tasklet ( Task *task )
   if (lastState != Flag) {
     lastState = Flag;
     switch (Flag) {
-      case 0: // Desligar
-        new Relay(PIN_RELAY2, PRESSBUTTONTIME);
-        break;;
-
       case 1: // Ligar
         new Relay(PIN_RELAY1, PRESSBUTTONTIME);
         break;;
 
       default:
-        debug_print(PSTR("Invalid Button"));
+      case 0: // Desligar
+        new Relay(PIN_RELAY2, PRESSBUTTONTIME);
         break;;
     }
   }
@@ -115,14 +111,11 @@ void serialtask ( Task *task )
   int uptime = millis()/MSECS_PER_SEC;
   int ano, mes, dia, hora, minuto, segundo;
 
-  SoftTimer.remove(task);
-
-  if (!Serial)
-    return;
-
   *buffer = Serial.peek();
-  if (*buffer == -1)
+  if (*buffer == -1) {
+    delete task;
     return;
+  }
 
   switch (*buffer) {
 #ifdef ENABLE_DEBUG
@@ -131,6 +124,7 @@ void serialtask ( Task *task )
       Serial.read();
       debugenabled = (debugenabled + 1) & 0x1;
       info_print(PSTR("Toggle debugging [%d]"), debugenabled);
+      delete task;
       return;
 #endif /* ENABLE_DEBUG */
 
@@ -145,6 +139,7 @@ void serialtask ( Task *task )
           (int)((uptime % SECS_PER_HOUR) / SECS_PER_MIN),
           (int)(uptime % 60) );
       info_print(PSTR("Boot count: %d"), get_next_count());
+      delete task;
       return;
 
     case 'o':
@@ -152,6 +147,7 @@ void serialtask ( Task *task )
       Serial.read();
       new Relay(PIN_RELAY1, PRESSBUTTONTIME);
       info_print(PSTR("Force MODEON"));
+      delete task;
       return;
 
     case 'f':
@@ -159,12 +155,14 @@ void serialtask ( Task *task )
       Serial.read();
       new Relay(PIN_RELAY2, PRESSBUTTONTIME);
       info_print(PSTR("Force MODEOFF"));
+      delete task;
       return;
 
     default:
         if (Serial.readBytes(buffer, DATETIMESTRINGLEN) != DATETIMESTRINGLEN)
         {
           printcurrentdate(tNow);
+          delete task;
           return;
         }
   }
@@ -173,6 +171,7 @@ void serialtask ( Task *task )
   if ( 6 != sscanf_P(buffer, PSTR("%04d%02d%02d%02d%02d%02d"), &ano, &mes, &dia, &hora, &minuto, &segundo) )
   {
     printcurrentdate(tNow);
+    delete task;
     return;
   }
 

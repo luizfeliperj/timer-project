@@ -203,6 +203,17 @@ class RTCSyncer : public DelayRun
     }
 };
 
+class SerialTask : public Task {
+  public:
+    ~SerialTask() {
+      Softtimer.remove(this);
+      debug_print(PSTR("SerialTask() going down for 0x%04x"), this);
+    }
+    SerialTask (Task *target) : Task (target) {
+      debug_print(PSTR("New instance of SerialTask() on 0x%04x"), this);
+    }
+};
+
 /* Retorna o domingo de páscoa de um determinado ano */
 time_t DomingoDePascoa(const int ano)
 {
