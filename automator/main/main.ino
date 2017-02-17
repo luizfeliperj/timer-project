@@ -23,7 +23,7 @@
 #define PIN_RELAY1         17
 #define PIN_RELAY2         16
 #define MONTHSPERAYEAR     12
-#define MAXSTRINGBUFFER    64
+#define MAXSTRINGBUFFER    80
 #define BAUDRATE           9600L
 #define Y2KMARKFIX         2000L
 #define MSECS_PER_SEC      1000UL

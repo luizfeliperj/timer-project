@@ -4,6 +4,7 @@
 int debug_print_hlp (uint8_t enabled, const __FlashStringHelper* file, const int line, const char *fmt, ...)
 {
   va_list args;
+  time_t tNow = now();
   char *pBuffer, buffer[MAXSTRINGBUFFER];
 
   if (enabled == MODEOFF)
@@ -11,7 +12,7 @@ int debug_print_hlp (uint8_t enabled, const __FlashStringHelper* file, const int
 
   strcpy_P (buffer, (const char *) file);
   pBuffer = buffer + strlen(buffer);
-  pBuffer += snprintf_P (pBuffer, sizeof(buffer) - strlen(buffer), PSTR(":%d "), line);
+  pBuffer += snprintf_P (pBuffer, sizeof(buffer) - strlen(buffer), PSTR(":%d %02d:%02d:%02d "), line, hour(tNow), minute(tNow), second(tNow));
 
   va_start (args, fmt);
   pBuffer += vsnprintf_P(pBuffer, sizeof(buffer) - strlen(buffer), fmt, args);
@@ -27,22 +28,24 @@ class TimerFixer : public DelayRun
 {
   private:
     Task *target;
+    uint32_t drift;
     uint32_t lastMicros;
 
     /* Funcao auxiliar para corrigir a execucao do callback a cada hora cheia */
     static boolean timerFixer ( Task* task )
     {
       TimerFixer *tFixer = static_cast<TimerFixer*>(task);
-      debug_print(PSTR("Running TimerFixer() for 0x%04x"), tFixer->target);
 
       if ( tFixer->lastMicros == 0 )
       {
-        tFixer->delayMs = MSECS_PER_SEC;
+        debug_print(PSTR("TimerFixer() running for 0x%04x"), tFixer->target);
+        tFixer->delayMs = tFixer->drift;
         tFixer->lastMicros = micros();
         tFixer->startDelayed();
         return true;
       }
 
+      debug_print(PSTR("TimerFixer() fixing for 0x%04x"), tFixer->target);
       tFixer->target->lastCallTimeMicros = tFixer->lastMicros;
       delete tFixer;
       return true;
@@ -51,9 +54,10 @@ class TimerFixer : public DelayRun
   public:
     ~TimerFixer()
     { debug_print(PSTR("TimerFixer() going down for 0x%04x"), this); }
-    TimerFixer (Task *target, uint32_t delayMs) : DelayRun (delayMs, timerFixer) {
-      this->target = target;
+    TimerFixer (Task *target, uint32_t drift, uint32_t delayMs) : DelayRun (delayMs, timerFixer) {
+      this->drift = drift;
       this->lastMicros = 0;
+      this->target = target;
       this->startDelayed();
       debug_print(PSTR("New instance of TimerFixer() on 0x%04x"), this);
     }
@@ -146,10 +150,9 @@ class RTCSyncer : public DelayRun
       time_t rtc = getTimeFromRTC();
       RTCSyncer *syncer = static_cast<RTCSyncer*>(task);
 
-      debug_print(PSTR("Running RTCSyncer() for 0x%04x, property tries: %d"), syncer->target, syncer->tries);
-
       if (syncer->tries < TIMESAMPLES)
       {
+        debug_print(PSTR("Running RTCSyncer() for 0x%04x, property tries: %d"), syncer->target, syncer->tries);
         syncer->times[syncer->tries] = rtc;
         syncer->startDelayed();
         syncer->tries++;
@@ -180,12 +183,11 @@ class RTCSyncer : public DelayRun
         int diff = times[i] - times[i-1];
         if (diff != 1)
         {
-          debug_print(PSTR("time diff != 1, %d"), diff);
+          debug_print(PSTR("RTC not sane, time diff != 1, %d"), diff);
           return false;
         }
       }
 
-      debug_print(PSTR("RTC is sane"));
       return true;
     }
 
@@ -476,8 +478,8 @@ void doDrift(Task *target, time_t tNow, uint32_t rounding)
     return;
 
   uint16_t period = (rounding/MSECS_PER_SEC) - drift;
-  new TimerFixer (target, (period * MSECS_PER_SEC));
-  debug_print(PSTR("doDrift need to drift %d seconds for 0x%04x"), period, target);
+  new TimerFixer (target, (drift * MSECS_PER_SEC), (period * MSECS_PER_SEC));
+  debug_print(PSTR("doDrift %d seconds/%ld for 0x%04x"), period, rounding/MSECS_PER_SEC, target);
 }
 
 /* Atuar na serial por interrupcao ao invez de fazer pooling */

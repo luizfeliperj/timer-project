@@ -8,7 +8,6 @@ void watchdogger ( Task *task )
 {
   char buffer[25];
   time_t tNow = now();
-  char colon[2]={ ' ', ':' };
   uint32_t uptime = millis()/MSECS_PER_SEC;
   uint16_t days = uptime/(24L*60L*60L);
   uint16_t hours = uptime%(24L*60L*60L);
@@ -19,11 +18,11 @@ void watchdogger ( Task *task )
   tNow += ehHorarioDeVerao(tNow, month(tNow), year(tNow)) * SECS_PER_HOUR;
 
   lcd.setCursor (0,0);
-  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %02d%c%02d"), day(tNow), month(tNow), year(tNow), hour(tNow), colon[second(tNow)%2], minute(tNow));
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %01dd%02d:%02d"), day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))), days, (hours / 3600), ((hours % 3600) / 60));
   lcd.print(buffer);
 
   lcd.setCursor (0,1);
-  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%05d %01dd%02d:%02d:%02d"), boot_count, days, (hours / 3600), ((hours % 3600) / 60), (hours % 60));
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%05d   %02d:%02d:%02d"), boot_count, hour(tNow), minute(tNow), second(tNow));
   lcd.print(buffer);
 
   wdt_reset();
@@ -89,11 +88,13 @@ void tasklet ( Task *task )
     lastState = Flag;
     switch (Flag) {
       case 1: // Ligar
+        lcd.setBacklight(HIGH);
         new Relay(PIN_RELAY1, PRESSBUTTONTIME);
         break;;
 
       default:
       case 0: // Desligar
+        lcd.setBacklight(LOW);
         new Relay(PIN_RELAY2, PRESSBUTTONTIME);
         break;;
     }
