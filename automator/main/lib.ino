@@ -169,7 +169,6 @@ class RTCSyncer : public DelayRun
         debug_print(PSTR("System time adjusted in %d seconds"), diff);
       }
 
-      doDrift(syncer->target, syncer->times[0], TIMESYNCING);
       delete syncer;
       return true;
     }
@@ -499,7 +498,7 @@ void doDrift(Task *target, time_t tNow, uint32_t rounding)
 }
 
 /* Atuar na serial por interrupcao ao invez de fazer pooling */
+/* Se houver um SerialEvent, verifica por pedidos na serial */
 void serialEvent() {
-  /* Se houver um SerialEvent, verifica por pedidos na serial */
   SoftTimer.add(new SerialTask(0, serialtask));
 }

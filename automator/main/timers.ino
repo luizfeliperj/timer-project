@@ -8,6 +8,7 @@ void watchdogger ( Task *task )
 {
   char buffer[25];
   time_t tNow = now();
+  char colon[2]={ ' ', ':' };
   uint32_t uptime = millis()/MSECS_PER_SEC;
   uint16_t days = uptime/(24L*60L*60L);
   uint16_t hours = uptime%(24L*60L*60L);
@@ -18,7 +19,7 @@ void watchdogger ( Task *task )
   }
 
   lcd.setCursor (0,0);
-  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %02d:%02d"), day(tNow), month(tNow), year(tNow), hour(tNow), minute(tNow));
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %02d%c%02d"), day(tNow), month(tNow), year(tNow), hour(tNow), colon[second(tNow)%2], minute(tNow));
   lcd.print(buffer);
 
   lcd.setCursor (0,1);
@@ -45,6 +46,7 @@ void timerlet ( Task *task )
   }
 
   new RTCSyncer (rtc, task, TIMESAMPLEMSEC);
+  doDrift(syncer->target, tNow, TIMESYNCING);
   return;
 }
 
