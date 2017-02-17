@@ -13,10 +13,10 @@ void watchdogger ( Task *task )
   uint16_t days = uptime/(24L*60L*60L);
   uint16_t hours = uptime%(24L*60L*60L);
 
-  if (lastState == MODEON) {
-    debug_print(PSTR("Mode is on, blink led"));
+  if (lastState == MODEON)
     led.start();
-  }
+
+  tNow += ehHorarioDeVerao(tNow, month(tNow), year(tNow)) * SECS_PER_HOUR;
 
   lcd.setCursor (0,0);
   snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %02d%c%02d"), day(tNow), month(tNow), year(tNow), hour(tNow), colon[second(tNow)%2], minute(tNow));
@@ -32,21 +32,22 @@ void watchdogger ( Task *task )
 /* Sincroniza a libc com o RTC */
 void timerlet ( Task *task )
 {
-  time_t tNow = now();
   time_t rtc = getTimeFromRTC();
   time_t source = getDateFromSource();
 
   debug_print(PSTR("Running timerlet()..."));
-  debug_print(PSTR("now(): %ld source: %ld rtc: %ld"), tNow, source, rtc);
+  debug_print(PSTR("source: %ld rtc: %ld"), source, rtc);
 
-  if ( rtc < source  )
+  if ( rtc < (source - SECS_PER_DAY) )
   {
-    debug_print(PSTR("rtc inconsist, %ld > %ld. Get source"), source, rtc);
-    rtc = source;
+    setTime(source);
+    debug_print(PSTR("rtc inconsist, %ld > %ld. Get source time"), source, rtc);
+  } else {
+    setTime(rtc);
   }
 
-  new RTCSyncer (rtc, task, TIMESAMPLEMSEC);
-  doDrift(syncer->target, tNow, TIMESYNCING);
+  new RTCSyncer (task, TIMESAMPLEMSEC);
+  doDrift(task, now(), TIMESYNCING);
   return;
 }
 
@@ -56,16 +57,13 @@ void tasklet ( Task *task )
   debug_print(PSTR("Running tasklet()..."));
 
   time_t tNow = now();
-  debug_print(PSTR("Now in time_t: %ld"), tNow);
-
   const int Year = year(tNow);
   const int Month = month(tNow);
+
+  debug_print(PSTR("Now in time_t: %ld"), tNow);
   debug_print(PSTR("Date: %02d/%04d"), Month, Year);
 
-  const int EhHorarioDeVerao = ehHorarioDeVerao(tNow, Month, Year);
-  debug_print(PSTR("EhHorarioDeVerao: %d"),EhHorarioDeVerao);
-
-  tNow += EhHorarioDeVerao * SECS_PER_HOUR;
+  tNow += ehHorarioDeVerao(tNow, month(tNow), year(tNow)) * SECS_PER_HOUR;
 
   const int Hour = hour(tNow);
   const int Minute = minute(tNow);
@@ -77,12 +75,12 @@ void tasklet ( Task *task )
   if (lastState == MODEINVALID)
   {
     if (Flag == MODEOFF) {
-      debug_print(PSTR("Making sure mode is off"));
       new Relay(PIN_RELAY2, PRESSBUTTONTIME);
+      debug_print(PSTR("Making sure mode is off"));
     }
 
-    debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
     lastState = MODEOFF;
+    debug_print(PSTR("Last mode was invalid, waiting energy to settle"));
     return;
   }
 
@@ -106,12 +104,14 @@ void tasklet ( Task *task )
 }
 
 /* Le comandos enviados pela serial regularmente a cada segundo */
-void serialtask ( Task *task )
+void serialtask ( Task *t )
 {
+  
   time_t tNow = now();
   char buffer[DATETIMESTRINGLEN + 1];
   int uptime = millis()/MSECS_PER_SEC;
   int ano, mes, dia, hora, minuto, segundo;
+  SerialTask *task = static_cast<SerialTask*>(t);
 
   *buffer = Serial.peek();
   if (*buffer == -1) {
@@ -128,6 +128,7 @@ void serialtask ( Task *task )
       info_print(PSTR("Toggle debugging [%d]"), debugenabled);
       delete task;
       return;
+      break;;
 #endif /* ENABLE_DEBUG */
 
     case 'a':
@@ -143,6 +144,7 @@ void serialtask ( Task *task )
       info_print(PSTR("Boot count: %d"), get_next_count());
       delete task;
       return;
+      break;;
 
     case 'o':
     case 'O':
@@ -151,6 +153,7 @@ void serialtask ( Task *task )
       info_print(PSTR("Force MODEON"));
       delete task;
       return;
+      break;;
 
     case 'f':
     case 'F':
@@ -159,6 +162,7 @@ void serialtask ( Task *task )
       info_print(PSTR("Force MODEOFF"));
       delete task;
       return;
+      break;;
 
     default:
         if (Serial.readBytes(buffer, DATETIMESTRINGLEN) != DATETIMESTRINGLEN)
@@ -167,6 +171,7 @@ void serialtask ( Task *task )
           delete task;
           return;
         }
+        break;;
   }
 
   buffer[DATETIMESTRINGLEN] = 0;
@@ -184,12 +189,7 @@ void serialtask ( Task *task )
 
   debug_print(PSTR("Converted time is %ld"), tNow);
 
-  int EhHorarioDeVerao = ehHorarioDeVerao(tNow, month(tNow), year(tNow));
-  if (EhHorarioDeVerao)
-   {
-    tNow -= SECS_PER_HOUR;
-    debug_print(PSTR("ehHorarioDeVerao returned true"));
-   }
+  tNow -= ehHorarioDeVerao(tNow, month(tNow), year(tNow)) * SECS_PER_HOUR;
 
   setTime(tNow);
   setDS3231time (second(tNow), minute(tNow), hour(tNow), weekday(tNow), day(tNow), month(tNow), year(tNow) - Y2KMARKFIX);

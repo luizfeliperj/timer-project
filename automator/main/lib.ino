@@ -192,10 +192,9 @@ class RTCSyncer : public DelayRun
   public:
     ~RTCSyncer()
     { debug_print(PSTR("RTCSyncer() going down for 0x%04x"), this); }
-    RTCSyncer (time_t tNow, Task *target, unsigned long delayMs) : DelayRun (delayMs, rtcSyncer)
+    RTCSyncer (Task *target, unsigned long delayMs) : DelayRun (delayMs, rtcSyncer)
     {
-      this->tries = 1;
-      this->times[0] = tNow;
+      this->tries = 0;
       this->target = target;
       this->startDelayed();
       debug_print(PSTR("New instance of RTCSyncer() on 0x%04x"), this);
@@ -370,36 +369,20 @@ int ehHorarioDeVerao(const time_t tNow, const uint8_t Month, const uint16_t Year
     cacheEhHorarioDeVerao.year = Year;
     cacheEhHorarioDeVerao.fim = TerminoHorarioVerao(Year-1);
     cacheEhHorarioDeVerao.inicio = InicioHorarioVerao(Year);
-    debug_print(PSTR("Fazendo cache do calculo do horario de verao"));
+    debug_print(PSTR("Cache do horario de verao de %d"), Year);
+    debug_print(PSTR("Inicio do horario de Verao: %lu"), cacheEhHorarioDeVerao.inicio);
+    debug_print(PSTR("Fim do horario de Verao: %lu"), cacheEhHorarioDeVerao.fim);
   }
-  else
-  { debug_print(PSTR("Usando horario de verao em cache")); }
   
-  int horarioDeVerao = 0;
-  if ( Month > MONTHSPERAYEAR/2 )
+  if ( Month > MONTHSPERAYEAR/2 &&  tNow >= cacheEhHorarioDeVerao.inicio )
   {
-    const time_t Inicio = cacheEhHorarioDeVerao.inicio;
-    debug_print(PSTR("Inicio do horario de Verao: %lu"), Inicio);
-    if ( tNow >= Inicio ) {
-      horarioDeVerao = 1;
-      debug_print(PSTR("Eh Horario de Verao"));
-    }
-    else
-    { debug_print(PSTR("Eh Horario Normal")); }
+    return 1;
   }
-  else
-  {
-    const time_t Fim = cacheEhHorarioDeVerao.fim;
-    debug_print(PSTR("Fim do horario de Verao: %lu"), Fim);
-    if ( (tNow + SECS_PER_HOUR) < Fim ) {
-      horarioDeVerao = 1;
-      debug_print(PSTR("Eh Horario de Verao"));
-    }
-    else
-    { debug_print(PSTR("Eh Horario Normal")); }
+  else if ( (tNow + SECS_PER_HOUR) < cacheEhHorarioDeVerao.fim ) {
+    return 1;
   }
 
-  return horarioDeVerao;
+  return 0;
 }
 
 /* Funcao de ajuda para imprimir o horario corrente */
