@@ -22,7 +22,7 @@ void watchdogger ( Task *task )
   lcd.print(buffer);
 
   lcd.setCursor (0,1);
-  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%05d   %02d:%02d:%02d"), boot_count, hour(tNow), minute(tNow), second(tNow));
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d:%02d:%02d   %05d"), hour(tNow), minute(tNow), second(tNow), boot_count);
   lcd.print(buffer);
 
   wdt_reset();
