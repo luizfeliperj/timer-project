@@ -323,7 +323,7 @@ const time_t getTimeFromRTC()
 
   #ifdef ENABLE_DEBUG
   // send it to the serial monitor
-  szwrote = snprintf_P (pBuffer, buffersz, PSTR("%02d:%02d:%02d %02d/%02d/%02d Day of week: "), hour, minute, second, dayOfMonth, month, year);
+  szwrote = snprintf_P (pBuffer, buffersz, PSTR("RTC: %02d:%02d:%02d %02d/%02d/%02d DoW: "), hour, minute, second, dayOfMonth, month, year);
   pBuffer += szwrote;
   buffersz -= szwrote;
   
