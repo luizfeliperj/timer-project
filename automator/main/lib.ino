@@ -479,7 +479,7 @@ void doDrift(Task *target, time_t tNow, uint32_t rounding)
 
   uint16_t period = (rounding/MSECS_PER_SEC) - drift;
   new TimerFixer (target, (drift * MSECS_PER_SEC), (period * MSECS_PER_SEC));
-  debug_print(PSTR("doDrift %d seconds/%ld for 0x%04x"), period, rounding/MSECS_PER_SEC, target);
+  debug_print(PSTR("doDrift %d/%ld seconds for 0x%04x"), period, rounding/MSECS_PER_SEC, target);
 }
 
 /* Atuar na serial por interrupcao ao invez de fazer pooling */
