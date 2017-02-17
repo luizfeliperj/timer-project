@@ -165,11 +165,11 @@ class RTCSyncer : public DelayRun
         return false;
       }
 
-      int diff = abs(tNow - rtc);
+      int diff = tNow - rtc;
       if ( diff )
       {
         setTime(rtc);
-        debug_print(PSTR("System time adjusted in %d seconds"), diff);
+        debug_print(PSTR("System time adjusted by %d seconds"), diff);
       }
 
       delete syncer;

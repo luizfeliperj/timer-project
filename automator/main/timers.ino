@@ -59,17 +59,12 @@ void tasklet ( Task *task )
   const int Year = year(tNow);
   const int Month = month(tNow);
 
-  debug_print(PSTR("Now in time_t: %ld"), tNow);
-  debug_print(PSTR("Date: %02d/%04d"), Month, Year);
-
-  tNow += ehHorarioDeVerao(tNow, month(tNow), year(tNow)) * SECS_PER_HOUR;
+  tNow += ehHorarioDeVerao(tNow, Month, Year) * SECS_PER_HOUR;
 
   const int Hour = hour(tNow);
   const int Minute = minute(tNow);
-  debug_print(PSTR("Hour: %02d:%02d"), Hour, Minute);
 
   const byte Flag = pgm_read_byte (&(timertable[Hour][Minute/TIMERTABLESPLITMIN]));
-  debug_print(PSTR("Flag: %d"), Flag);
 
   if (lastState == MODEINVALID)
   {
@@ -83,7 +78,8 @@ void tasklet ( Task *task )
     return;
   }
 
-  debug_print(PSTR("lastState: %d"), lastState);
+  debug_print(PSTR("Date: %02d/%04d, Flag: %d, lastState: %d"), Month, Year, Flag, lastState);
+
   if (lastState != Flag) {
     lastState = Flag;
     switch (Flag) {
