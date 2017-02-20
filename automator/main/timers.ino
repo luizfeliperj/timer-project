@@ -17,7 +17,7 @@ void watchdogger ( Task *task )
 
 
   if (ehHorarioDeVerao(tNow, year(tNow)))
-    tNow +=  SECS_PER_HOUR;
+    tNow += SECS_PER_HOUR;
 
   lcd.setCursor (0,0);
   snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %01dd%02d:%02d"), day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))), days, (hours / 3600), ((hours % 3600) / 60));
@@ -59,7 +59,6 @@ void tasklet ( Task *task )
 
   time_t tNow = now();
   const int Year = year(tNow);
-  const int Month = month(tNow);
 
   if (ehHorarioDeVerao(tNow, Year))
     tNow +=  SECS_PER_HOUR;
@@ -69,8 +68,7 @@ void tasklet ( Task *task )
 
   const byte Flag = pgm_read_byte (&(timertable[Hour][Minute/TIMERTABLESPLITMIN]));
 
-  if (lastState == MODEINVALID)
-  {
+  if (lastState == MODEINVALID) {
     if (Flag == MODEOFF) {
       new Relay(PIN_RELAY2, PRESSBUTTONTIME);
       debug_print(PSTR("Making sure mode is off"));
@@ -81,7 +79,7 @@ void tasklet ( Task *task )
     return;
   }
 
-  debug_print(PSTR("Date: %02d/%04d, Flag: %d, lastState: %d"), Month, Year, Flag, lastState);
+  debug_print(PSTR("Flag: %d, lastState: %d"), Flag, lastState);
 
   if (lastState != Flag) {
     lastState = Flag;
@@ -113,7 +111,7 @@ void serialtask ( Task *t )
   int ano, mes, dia, hora, minuto, segundo;
   SerialTask *task = static_cast<SerialTask*>(t);
 
-  *buffer = Serial.peek();
+  *buffer = Serial.read();
   if (*buffer == -1) {
     delete task;
     return;
@@ -123,17 +121,14 @@ void serialtask ( Task *t )
 #ifdef ENABLE_DEBUG
     case 'd':
     case 'D':
-      Serial.read();
       debugenabled = (debugenabled + 1) & 0x1;
       info_print(PSTR("Toggle debugging [%d]"), debugenabled);
       delete task;
       return;
-      break;;
 #endif /* ENABLE_DEBUG */
 
     case 'a':
     case 'A':
-      Serial.read();
       info_print(PSTR("Compilado por Luiz Felipe Silva"));
       info_print(PSTR("Em " __TIMESTAMP__ ));
       info_print(PSTR("Uptime %d %02d:%02d:%02d"),
@@ -144,34 +139,29 @@ void serialtask ( Task *t )
       info_print(PSTR("Boot count: %d"), get_next_count());
       delete task;
       return;
-      break;;
 
     case 'o':
     case 'O':
-      Serial.read();
       new Relay(PIN_RELAY1, PRESSBUTTONTIME);
       info_print(PSTR("Force MODEON"));
       delete task;
       return;
-      break;;
+      break;
 
     case 'f':
     case 'F':
-      Serial.read();
       new Relay(PIN_RELAY2, PRESSBUTTONTIME);
       info_print(PSTR("Force MODEOFF"));
       delete task;
       return;
-      break;;
 
     default:
-        if (Serial.readBytes(buffer, DATETIMESTRINGLEN) != DATETIMESTRINGLEN)
-        {
-          printcurrentdate(tNow);
-          delete task;
-          return;
-        }
-        break;;
+      if (Serial.readBytes(&buffer[1], DATETIMESTRINGLEN-1) != DATETIMESTRINGLEN-1)
+        break;
+
+      printcurrentdate(tNow);
+      delete task;
+      return;
   }
 
   buffer[DATETIMESTRINGLEN] = 0;
@@ -193,7 +183,7 @@ void serialtask ( Task *t )
     tNow -= SECS_PER_HOUR;
 
   setTime(tNow);
-  setDS3231time (second(tNow), minute(tNow), hour(tNow), weekday(tNow), day(tNow), month(tNow), year(tNow) - Y2KMARKFIX);
+  setDS3231time (second(tNow), minute(tNow), hour(tNow), weekday(tNow), day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))));
 
   info_print(PSTR("!!! Ok !!!"));
 

@@ -22,13 +22,12 @@
 #define PIN_LED            2
 #define PIN_RELAY1         17
 #define PIN_RELAY2         16
-#define MAXSTRINGBUFFER    80
+#define MAXSTRINGBUFFER    81
 #define BAUDRATE           9600L
-#define Y2KMARKFIX         2000L
 #define MSECS_PER_SEC      1000UL
-#define TIMESYNCING        (60UL * 60UL * MSECS_PER_SEC)
 #define TIMESAMPLES        3
 #define TIMESAMPLEMSEC     1000UL
+#define TIMESYNCING        (60UL * 60UL * MSECS_PER_SEC)
 #define POOLINGTIME        (60UL * MSECS_PER_SEC)
 #define PRESSBUTTONTIME    ( 2UL * MSECS_PER_SEC)
 #define PRESSBUTTONTRIES   3
@@ -90,7 +89,7 @@ void setup() {
 
   /* Quarto, Corrige bug que o SoftTimer nao invoca o serialEventRun */
   if (serialEventRun)
-    SoftTimer.add(new Task(0, serialEventRun));
+    SoftTimer.add(new Task(0, (void(*)(Task*))serialEventRun));
 
   wdt_enable(WDTO_2S);
   boot_count = get_next_count(1);
