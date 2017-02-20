@@ -189,7 +189,7 @@ void serialtask ( Task *t )
 
   debug_print(PSTR("Converted time is %ld"), tNow);
 
-  ehHorarioDeVerao(tNow, year(tNow))
+  if (ehHorarioDeVerao(tNow, year(tNow)))
     tNow -= SECS_PER_HOUR;
 
   setTime(tNow);

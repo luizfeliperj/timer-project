@@ -377,7 +377,7 @@ int ehHorarioDeVerao(const time_t tNow, const uint16_t Year)
     debug_print(PSTR("Fim do horario de Verao: %lu"), cacheEhHorarioDeVerao.fim + SECS_PER_HOUR);
   }
   
-  if ( (tNow + < cacheEhHorarioDeVerao.fim) || (tNow >= cacheEhHorarioDeVerao.inicio) )
+  if ( (tNow < cacheEhHorarioDeVerao.fim) || (tNow >= cacheEhHorarioDeVerao.inicio) )
     return 1;
 
   return 0;
