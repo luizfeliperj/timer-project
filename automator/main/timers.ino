@@ -15,7 +15,9 @@ void watchdogger ( Task *task )
   if (lastState == MODEON)
     led.start();
 
-  tNow += ehHorarioDeVerao(tNow, month(tNow), year(tNow)) * SECS_PER_HOUR;
+
+  if (ehHorarioDeVerao(tNow, year(tNow)))
+    tNow +=  SECS_PER_HOUR;
 
   lcd.setCursor (0,0);
   snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %01dd%02d:%02d"), day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))), days, (hours / 3600), ((hours % 3600) / 60));
@@ -59,7 +61,8 @@ void tasklet ( Task *task )
   const int Year = year(tNow);
   const int Month = month(tNow);
 
-  tNow += ehHorarioDeVerao(tNow, Month, Year) * SECS_PER_HOUR;
+  if (ehHorarioDeVerao(tNow, Year))
+    tNow +=  SECS_PER_HOUR;
 
   const int Hour = hour(tNow);
   const int Minute = minute(tNow);
@@ -186,7 +189,8 @@ void serialtask ( Task *t )
 
   debug_print(PSTR("Converted time is %ld"), tNow);
 
-  tNow -= ehHorarioDeVerao(tNow, month(tNow), year(tNow)) * SECS_PER_HOUR;
+  ehHorarioDeVerao(tNow, year(tNow))
+    tNow -= SECS_PER_HOUR;
 
   setTime(tNow);
   setDS3231time (second(tNow), minute(tNow), hour(tNow), weekday(tNow), day(tNow), month(tNow), year(tNow) - Y2KMARKFIX);

@@ -22,7 +22,6 @@
 #define PIN_LED            2
 #define PIN_RELAY1         17
 #define PIN_RELAY2         16
-#define MONTHSPERAYEAR     12
 #define MAXSTRINGBUFFER    80
 #define BAUDRATE           9600L
 #define Y2KMARKFIX         2000L

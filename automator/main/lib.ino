@@ -364,25 +364,21 @@ const time_t getTimeFromRTC()
 }  
 
 /* Funcao que empacota a verificacao de se o horario corrente eh horario de verao */
-int ehHorarioDeVerao(const time_t tNow, const uint8_t Month, const uint16_t Year)
+int ehHorarioDeVerao(const time_t tNow, const uint16_t Year)
 {
   if (cacheEhHorarioDeVerao.year != Year)
   {
     cacheEhHorarioDeVerao.year = Year;
     cacheEhHorarioDeVerao.fim = TerminoHorarioVerao(Year-1);
-    cacheEhHorarioDeVerao.inicio = InicioHorarioVerao(Year);
+    cacheEhHorarioDeVerao.inicio = InicioHorarioVerao(Year) - SECS_PER_HOUR;
+
     debug_print(PSTR("Cache do horario de verao de %d"), Year);
     debug_print(PSTR("Inicio do horario de Verao: %lu"), cacheEhHorarioDeVerao.inicio);
-    debug_print(PSTR("Fim do horario de Verao: %lu"), cacheEhHorarioDeVerao.fim);
+    debug_print(PSTR("Fim do horario de Verao: %lu"), cacheEhHorarioDeVerao.fim + SECS_PER_HOUR);
   }
   
-  if ( Month > MONTHSPERAYEAR/2 &&  tNow >= cacheEhHorarioDeVerao.inicio )
-  {
+  if ( (tNow + < cacheEhHorarioDeVerao.fim) || (tNow >= cacheEhHorarioDeVerao.inicio) )
     return 1;
-  }
-  else if ( (tNow + SECS_PER_HOUR) < cacheEhHorarioDeVerao.fim ) {
-    return 1;
-  }
 
   return 0;
 }
@@ -390,7 +386,7 @@ int ehHorarioDeVerao(const time_t tNow, const uint8_t Month, const uint16_t Year
 /* Funcao de ajuda para imprimir o horario corrente */
 void printcurrentdate(time_t tNow)
 {
-  if (ehHorarioDeVerao(tNow, month(tNow), year(tNow)))
+  if (ehHorarioDeVerao(tNow, year(tNow)))
     tNow += SECS_PER_HOUR;
     
   uint16_t ano = year(tNow);
