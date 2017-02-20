@@ -101,76 +101,13 @@ void tasklet ( Task *task )
   return;
 }
 
-/* Le comandos enviados pela serial regularmente a cada segundo */
-void serialtask ( Task *t )
+void serialSetTime(char *buffer, time_t tNow)
 {
-  
-  time_t tNow = now();
-  char buffer[DATETIMESTRINGLEN + 1];
-  int uptime = millis()/MSECS_PER_SEC;
   int ano, mes, dia, hora, minuto, segundo;
-  SerialTask *task = static_cast<SerialTask*>(t);
-
-  *buffer = Serial.read();
-  if (*buffer == -1) {
-    delete task;
-    return;
-  }
-
-  switch (*buffer) {
-#ifdef ENABLE_DEBUG
-    case 'd':
-    case 'D':
-      debugenabled = (debugenabled + 1) & 0x1;
-      info_print(PSTR("Toggle debugging [%d]"), debugenabled);
-      delete task;
-      return;
-#endif /* ENABLE_DEBUG */
-
-    case 'a':
-    case 'A':
-      info_print(PSTR("Compilado por Luiz Felipe Silva"));
-      info_print(PSTR("Em " __TIMESTAMP__ ));
-      info_print(PSTR("Uptime %d %02d:%02d:%02d"),
-          (int)((uptime / SECS_PER_DAY)),
-          (int)((uptime % SECS_PER_DAY) / SECS_PER_HOUR),
-          (int)((uptime % SECS_PER_HOUR) / SECS_PER_MIN),
-          (int)(uptime % 60) );
-      info_print(PSTR("Boot count: %d"), get_next_count());
-      delete task;
-      return;
-
-    case 'o':
-    case 'O':
-      new Relay(PIN_RELAY1, PRESSBUTTONTIME);
-      info_print(PSTR("Force MODEON"));
-      delete task;
-      return;
-      break;
-
-    case 'f':
-    case 'F':
-      new Relay(PIN_RELAY2, PRESSBUTTONTIME);
-      info_print(PSTR("Force MODEOFF"));
-      delete task;
-      return;
-
-    default:
-      if (Serial.readBytes(&buffer[1], DATETIMESTRINGLEN-1) != DATETIMESTRINGLEN-1)
-        break;
-
-      printcurrentdate(tNow);
-      delete task;
-      return;
-  }
-
+  
   buffer[DATETIMESTRINGLEN] = 0;
   if ( 6 != sscanf_P(buffer, PSTR("%04d%02d%02d%02d%02d%02d"), &ano, &mes, &dia, &hora, &minuto, &segundo) )
-  {
-    printcurrentdate(tNow);
-    delete task;
     return;
-  }
 
   info_print(PSTR("*** Setting date to %02d/%02d/%04d %02d:%02d:%02d ***"), dia, mes, ano, hora, minuto, segundo);
 
@@ -186,6 +123,64 @@ void serialtask ( Task *t )
   setDS3231time (second(tNow), minute(tNow), hour(tNow), weekday(tNow), day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))));
 
   info_print(PSTR("!!! Ok !!!"));
+}
+
+/* Le comandos enviados pela serial regularmente a cada segundo */
+void serialtask ( Task *t )
+{
+  
+  time_t tNow = now();
+  char buffer[DATETIMESTRINGLEN + 1];
+  int uptime = millis()/MSECS_PER_SEC;
+  
+  SerialTask *task = static_cast<SerialTask*>(t);
+
+  *buffer = Serial.read();
+  if (*buffer == -1) {
+    delete task;
+    return;
+  }
+
+  switch (*buffer) {
+#ifdef ENABLE_DEBUG
+    case 'd':
+    case 'D':
+      debugenabled = (debugenabled + 1) & 0x1;
+      info_print(PSTR("Toggle debugging [%d]"), debugenabled);
+      break;
+#endif /* ENABLE_DEBUG */
+
+    case 'a':
+    case 'A':
+      info_print(PSTR("Compilado por Luiz Felipe Silva"));
+      info_print(PSTR("Em " __TIMESTAMP__ ));
+      info_print(PSTR("Uptime %d %02d:%02d:%02d"),
+          (int)((uptime / SECS_PER_DAY)),
+          (int)((uptime % SECS_PER_DAY) / SECS_PER_HOUR),
+          (int)((uptime % SECS_PER_HOUR) / SECS_PER_MIN),
+          (int)(uptime % 60) );
+      info_print(PSTR("Boot count: %d"), get_next_count());
+      break;
+
+    case 'o':
+    case 'O':
+      new Relay(PIN_RELAY1, PRESSBUTTONTIME);
+      info_print(PSTR("Force MODEON"));
+      break;
+
+    case 'f':
+    case 'F':
+      new Relay(PIN_RELAY2, PRESSBUTTONTIME);
+      info_print(PSTR("Force MODEOFF"));
+      break;
+
+    default:
+      if (Serial.readBytes(&buffer[1], DATETIMESTRINGLEN-1) != DATETIMESTRINGLEN-1)
+        serialSetTime(buffer, tNow);
+
+      printcurrentdate(tNow);
+      break;
+  }
 
   delete task;
   return;
