@@ -146,15 +146,14 @@ class RTCSyncer : public DelayRun
     /* Funcao auxiliar para corrigir a execucao do callback a cada hora cheia */
     static boolean rtcSyncer ( Task* task )
     {
-      time_t tNow = now();
-      time_t rtc = getTimeFromRTC();
       RTCSyncer *syncer = static_cast<RTCSyncer*>(task);
 
       if (syncer->tries < TIMESAMPLES)
       {
-        debug_print(PSTR("Running RTCSyncer() for 0x%04x, property tries: %d"), syncer->target, syncer->tries);
-        syncer->times[syncer->tries] = rtc;
         syncer->startDelayed();
+        
+        debug_print(PSTR("Running RTCSyncer() for 0x%04x, property tries: %d"), syncer->target, syncer->tries);
+        syncer->times[syncer->tries] = getTimeFromRTC();
         syncer->tries++;
         return true;
       }
@@ -165,6 +164,8 @@ class RTCSyncer : public DelayRun
         return false;
       }
 
+      time_t tNow = now();
+      time_t rtc = getTimeFromRTC();
       int diff = tNow - rtc;
       if ( diff )
       {
@@ -475,6 +476,7 @@ void doDrift(Task *target, time_t tNow, uint32_t rounding)
 
   uint16_t period = (rounding/MSECS_PER_SEC) - drift;
   new TimerFixer (target, (drift * MSECS_PER_SEC), (period * MSECS_PER_SEC));
+
   debug_print(PSTR("doDrift %d/%ld seconds for 0x%04x"), period, rounding/MSECS_PER_SEC, target);
 }
 
@@ -482,4 +484,27 @@ void doDrift(Task *target, time_t tNow, uint32_t rounding)
 /* Se houver um SerialEvent, verifica por pedidos na serial */
 void serialEvent() {
   SoftTimer.add(new SerialTask(0, serialtask));
+}
+
+/* Ajusta o horario do rtc e do sistema de acordo com o que foi inserido em serialet */
+void serialSetTime(char *buffer, time_t tNow)
+{
+  int ano, mes, dia, hora, minuto, segundo;
+
+  buffer[DATETIMESTRINGLEN] = 0;
+  if ( 6 != sscanf_P(buffer, PSTR("%04d%02d%02d%02d%02d%02d"), &ano, &mes, &dia, &hora, &minuto, &segundo) )
+    return;
+
+  TimeElements T = {(uint8_t)segundo, (uint8_t)minuto, (uint8_t)hora, (uint8_t)0, (uint8_t)dia, (uint8_t)mes, (uint8_t)CalendarYrToTm(ano)};
+  tNow = makeTime(T);
+
+  if (ehHorarioDeVerao(tNow, year(tNow)))
+    tNow -= SECS_PER_HOUR;
+
+  setTime(tNow);
+  setDS3231time (second(tNow), minute(tNow), hour(tNow), weekday(tNow), day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))));
+
+  info_print(PSTR("*** Setting date to %02d/%02d/%04d %02d:%02d:%02d ***"), dia, mes, ano, hora, minuto, segundo);
+  debug_print(PSTR("Converted time is %ld"), tNow);
+  info_print(PSTR("!!! Ok !!!"));
 }

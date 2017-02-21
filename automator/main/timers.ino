@@ -1,6 +1,6 @@
 #undef __FILENAME__
 #define __FILENAME__ "timers"
-static int8_t lastState = MODEINVALID;
+static uint8_t lastState = MODEINVALID;
 static BlinkTask led = BlinkTask(PIN_LED, LEDBLINKINTERVAL, LEDBLINKINTERVAL, LEDBLINKTIMES);
 
 /* Reinicia o watchdog */
@@ -101,35 +101,9 @@ void tasklet ( Task *task )
   return;
 }
 
-void serialSetTime(char *buffer, time_t tNow)
-{
-  int ano, mes, dia, hora, minuto, segundo;
-  
-  buffer[DATETIMESTRINGLEN] = 0;
-  if ( 6 != sscanf_P(buffer, PSTR("%04d%02d%02d%02d%02d%02d"), &ano, &mes, &dia, &hora, &minuto, &segundo) )
-    return;
-
-  info_print(PSTR("*** Setting date to %02d/%02d/%04d %02d:%02d:%02d ***"), dia, mes, ano, hora, minuto, segundo);
-
-  TimeElements T = {(uint8_t)segundo, (uint8_t)minuto, (uint8_t)hora, (uint8_t)0, (uint8_t)dia, (uint8_t)mes, (uint8_t)CalendarYrToTm(ano)};
-  tNow = makeTime(T);
-
-  debug_print(PSTR("Converted time is %ld"), tNow);
-
-  if (ehHorarioDeVerao(tNow, year(tNow)))
-    tNow -= SECS_PER_HOUR;
-
-  setTime(tNow);
-  setDS3231time (second(tNow), minute(tNow), hour(tNow), weekday(tNow), day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))));
-
-  info_print(PSTR("!!! Ok !!!"));
-}
-
 /* Le comandos enviados pela serial regularmente a cada segundo */
 void serialtask ( Task *t )
 {
-  
-  time_t tNow = now();
   char buffer[DATETIMESTRINGLEN + 1];
   int uptime = millis()/MSECS_PER_SEC;
   
@@ -175,10 +149,12 @@ void serialtask ( Task *t )
       break;
 
     default:
-      if (Serial.readBytes(&buffer[1], DATETIMESTRINGLEN-1) != DATETIMESTRINGLEN-1)
-        serialSetTime(buffer, tNow);
+      if (Serial.readBytes(&buffer[1], DATETIMESTRINGLEN-1) == DATETIMESTRINGLEN-1) {
+        serialSetTime(buffer, now());
+        break;
+      }
 
-      printcurrentdate(tNow);
+      printcurrentdate(now());
       break;
   }
 
