@@ -148,7 +148,7 @@ class RTCSyncer : public DelayRun
       for (int i = 1; i < TIMESAMPLES; i++)
       {
         int diff = times[i] - times[i-1];
-        if (diff != 1)
+        if (diff <= 0 || diff > 2)
         {
           debug_print(PSTR("RTC not sane, time diff != 1, %d"), diff);
           return false;
