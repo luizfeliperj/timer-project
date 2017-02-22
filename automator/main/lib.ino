@@ -38,9 +38,9 @@ class TimerFixer : public DelayRun
 
       if ( tFixer->lastMicros == 0 )
       {
-        tFixer->startDelayed();
-        tFixer->lastMicros = micros();
         tFixer->delayMs = tFixer->drift;
+        tFixer->lastMicros = micros();
+        tFixer->startDelayed();
         debug_print(PSTR("TimerFixer() running for 0x%04x"), tFixer->target);
         return true;
       }
@@ -55,10 +55,10 @@ class TimerFixer : public DelayRun
     ~TimerFixer()
     { debug_print(PSTR("TimerFixer() going down for 0x%04x"), this); }
     TimerFixer (Task *target, uint32_t drift, uint32_t delayMs) : DelayRun (delayMs, timerFixer) {
-      this->startDelayed();
       this->target = target;
       this->lastMicros = 0;
       this->drift = drift;
+      this->startDelayed();
       debug_print(PSTR("New instance of TimerFixer() on 0x%04x"), this);
     }
 };
@@ -143,6 +143,21 @@ class RTCSyncer : public DelayRun
     time_t times[TIMESAMPLES];
     uint8_t tries;
 
+    bool isRTCSane()
+    {
+      for (int i = 1; i < TIMESAMPLES; i++)
+      {
+        int diff = times[i] - times[i-1];
+        if (diff != 1)
+        {
+          debug_print(PSTR("RTC not sane, time diff != 1, %d"), diff);
+          return false;
+        }
+      }
+
+      return true;
+    }
+
     /* Funcao auxiliar para corrigir a execucao do callback a cada hora cheia */
     static boolean rtcSyncer ( Task* task )
     {
@@ -174,21 +189,6 @@ class RTCSyncer : public DelayRun
       }
 
       delete syncer;
-      return true;
-    }
-
-    bool isRTCSane()
-    {
-      for (int i = 1; i < TIMESAMPLES; i++)
-      {
-        int diff = times[i] - times[i-1];
-        if (diff != 1)
-        {
-          debug_print(PSTR("RTC not sane, time diff != 1, %d"), diff);
-          return false;
-        }
-      }
-
       return true;
     }
 
