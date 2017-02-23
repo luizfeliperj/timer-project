@@ -90,7 +90,7 @@ void setup() {
   if (serialEventRun)
     SoftTimer.add(new Task(0, (void(*)(Task*))serialEventRun));
 
-  wdt_enable(WDTO_2S);
+  wdt_enable(WDTO_8S);
   boot_count = get_next_count(1);
   debug_print(PSTR("End of setup process, boot count is %d"), boot_count);
 }

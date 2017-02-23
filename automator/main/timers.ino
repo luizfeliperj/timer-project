@@ -1,7 +1,7 @@
 #undef __FILENAME__
 #define __FILENAME__ "timers"
-static uint8_t lastState = MODEINVALID;
-static BlinkTask led = BlinkTask(PIN_LED, LEDBLINKINTERVAL, LEDBLINKINTERVAL, LEDBLINKTIMES);
+uint8_t lastState = MODEINVALID;
+BlinkTask led = BlinkTask(PIN_LED, LEDBLINKINTERVAL, LEDBLINKINTERVAL, LEDBLINKTIMES);
 
 /* Reinicia o watchdog */
 void watchdogger ( Task *task )
@@ -14,7 +14,6 @@ void watchdogger ( Task *task )
 
   if (lastState == MODEON)
     led.start();
-
 
   if (ehHorarioDeVerao(tNow, year(tNow)))
     tNow += SECS_PER_HOUR;
