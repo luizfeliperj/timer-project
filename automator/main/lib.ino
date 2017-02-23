@@ -38,10 +38,10 @@ class TimerFixer : public DelayRun
 
       if ( tFixer->lastMicros == 0 )
       {
+        debug_print(PSTR("TimerFixer() running for 0x%04x"), tFixer->target);
         tFixer->delayMs = tFixer->drift;
         tFixer->lastMicros = micros();
         tFixer->startDelayed();
-        debug_print(PSTR("TimerFixer() running for 0x%04x"), tFixer->target);
         return true;
       }
 
@@ -55,11 +55,11 @@ class TimerFixer : public DelayRun
     ~TimerFixer()
     { debug_print(PSTR("TimerFixer() going down for 0x%04x"), this); }
     TimerFixer (Task *target, uint32_t drift, uint32_t delayMs) : DelayRun (delayMs, timerFixer) {
+      debug_print(PSTR("New instance of TimerFixer() on 0x%04x"), this);
       this->target = target;
       this->lastMicros = 0;
       this->drift = drift;
       this->startDelayed();
-      debug_print(PSTR("New instance of TimerFixer() on 0x%04x"), this);
     }
 };
 
@@ -165,11 +165,9 @@ class RTCSyncer : public DelayRun
 
       if (syncer->tries < TIMESAMPLES)
       {
-        syncer->startDelayed();
-        
         debug_print(PSTR("Running RTCSyncer() for 0x%04x, property tries: %d"), syncer->target, syncer->tries);
-        syncer->times[syncer->tries] = getTimeFromRTC();
-        syncer->tries++;
+        syncer->times[syncer->tries++] = getTimeFromRTC();
+        syncer->startDelayed();
         return true;
       }
 
@@ -197,10 +195,10 @@ class RTCSyncer : public DelayRun
     { debug_print(PSTR("RTCSyncer() going down for 0x%04x"), this); }
     RTCSyncer (Task *target, unsigned long delayMs) : DelayRun (delayMs, rtcSyncer)
     {
+      debug_print(PSTR("New instance of RTCSyncer() on 0x%04x"), this);
       this->tries = 0;
       this->target = target;
       this->startDelayed();
-      debug_print(PSTR("New instance of RTCSyncer() on 0x%04x"), this);
     }
 };
 
