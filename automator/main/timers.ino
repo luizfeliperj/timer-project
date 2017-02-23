@@ -36,11 +36,11 @@ void timerlet ( Task *task )
   time_t source = getDateFromSource();
 
   debug_print(PSTR("Running timerlet()..."));
-  debug_print(PSTR("source: %ld rtc: %ld"), source, rtc);
 
   if ( rtc < (source - SECS_PER_DAY) )
   {
     setTime(source);
+    debug_print(PSTR("source: %ld rtc: %ld"), source, rtc);
     debug_print(PSTR("rtc inconsist, %ld > %ld. Get source time"), source, rtc);
   } else {
     setTime(rtc);
