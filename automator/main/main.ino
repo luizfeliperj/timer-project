@@ -61,6 +61,9 @@ void setup() {
   // put your setup code here, to run once:
   wdt_disable();
 
+  digitalWrite (PIN_LED, LOW);
+  pinMode(PIN_LED, OUTPUT);
+
   digitalWrite (PIN_RELAY1, HIGH);
   pinMode(PIN_RELAY1, OUTPUT);
 

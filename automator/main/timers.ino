@@ -12,9 +12,9 @@ void watchdogger ( Task *task )
   uint16_t hours = uptime%(24UL*60UL*60UL);
 
   if (lastState == MODEON)
-    digitalWrite (PIN_LED, LOW);
-  else
     digitalWrite (PIN_LED, HIGH);
+  else
+    digitalWrite (PIN_LED, LOW);
 
   if (ehHorarioDeVerao(tNow, year(tNow)))
     tNow += SECS_PER_HOUR;
