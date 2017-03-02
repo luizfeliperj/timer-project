@@ -20,7 +20,7 @@ void watchdogger ( Task *task )
     tNow += SECS_PER_HOUR;
 
   lcd.setCursor (0,0);
-  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %01d%02d:%02d"),
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %01dd%02d:%02d"),
     day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))), days, (hours / 3600), ((hours % 3600) / 60));
   lcd.print(buffer);
 
