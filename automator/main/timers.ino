@@ -1,7 +1,6 @@
 #undef __FILENAME__
 #define __FILENAME__ "timers"
 uint8_t lastState = MODEINVALID;
-BlinkTask led = BlinkTask(PIN_LED, LEDBLINKINTERVAL, LEDBLINKINTERVAL, LEDBLINKTIMES);
 
 /* Reinicia o watchdog */
 void watchdogger ( Task *task )
@@ -9,21 +8,24 @@ void watchdogger ( Task *task )
   char buffer[25];
   time_t tNow = now();
   uint32_t uptime = millis()/MSECS_PER_SEC;
-  uint16_t days = uptime/(24L*60L*60L);
-  uint16_t hours = uptime%(24L*60L*60L);
+  uint16_t days = uptime/(24UL*60UL*60UL);
+  uint16_t hours = uptime%(24UL*60UL*60UL);
 
   if (lastState == MODEON)
-    led.start();
+    digitalWrite (PIN_LED, LOW);
+  else
+    digitalWrite (PIN_LED, HIGH);
 
   if (ehHorarioDeVerao(tNow, year(tNow)))
     tNow += SECS_PER_HOUR;
 
   lcd.setCursor (0,0);
-  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %01dd%02d:%02d"), day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))), days, (hours / 3600), ((hours % 3600) / 60));
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %01d%02d:%02d"),
+    day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))), days, (hours / 3600), ((hours % 3600) / 60));
   lcd.print(buffer);
 
   lcd.setCursor (0,1);
-  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d:%02d:%02d   %05d"), hour(tNow), minute(tNow), second(tNow), boot_count);
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d:%02d:%02d   %05u"), hour(tNow), minute(tNow), second(tNow), boot_count);
   lcd.print(buffer);
 
   wdt_reset();
@@ -39,9 +41,9 @@ void timerlet ( Task *task )
 
   if ( rtc < (source - SECS_PER_DAY) )
   {
-    setTime(source);
     debug_print(PSTR("source: %ld rtc: %ld"), source, rtc);
     debug_print(PSTR("rtc inconsist, %ld > %ld. Get source time"), source, rtc);
+    setTime(source);
   } else {
     setTime(rtc);
   }
@@ -103,8 +105,9 @@ void tasklet ( Task *task )
 /* Le comandos enviados pela serial regularmente a cada segundo */
 void serialtask ( Task *t )
 {
+  uint32_t uptime;
+  uint16_t days, hours;
   char buffer[DATETIMESTRINGLEN + 1];
-  int uptime = millis()/MSECS_PER_SEC;
   
   SerialTask *task = static_cast<SerialTask*>(t);
 
@@ -125,13 +128,14 @@ void serialtask ( Task *t )
 
     case 'a':
     case 'A':
+      uptime = millis()/MSECS_PER_SEC;
+      days = uptime/(24UL*60UL*60UL);
+      hours = uptime%(24UL*60UL*60UL);
+
       info_print(PSTR("Compilado por Luiz Felipe Silva"));
       info_print(PSTR("Em " __TIMESTAMP__ ));
-      info_print(PSTR("Uptime %d %02d:%02d:%02d"),
-          (int)((uptime / SECS_PER_DAY)),
-          (int)((uptime % SECS_PER_DAY) / SECS_PER_HOUR),
-          (int)((uptime % SECS_PER_HOUR) / SECS_PER_MIN),
-          (int)(uptime % 60) );
+      info_print(PSTR("Uptime %02d %02d:%02d:%02d"),
+          days, (hours / 3600), ((hours % 3600) / 60), ((hours % 3600) % 60) );
       info_print(PSTR("Boot count: %d"), get_next_count());
       break;
 

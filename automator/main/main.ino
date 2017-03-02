@@ -4,7 +4,6 @@
 #include <Wire.h>
 #include <TimeLib.h>
 #include <SoftTimer.h>
-#include <BlinkTask.h>
 #include <DelayRun.h>
 #include <stdint.h>
 #include <EEPROM.h>
