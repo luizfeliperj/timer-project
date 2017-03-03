@@ -134,9 +134,9 @@ void serialtask ( Task *t )
 
       info_print(PSTR("Compilado por Luiz Felipe Silva"));
       info_print(PSTR("Em " __TIMESTAMP__ ));
-      info_print(PSTR("Uptime %02d %02d:%02d:%02d"),
-          days, (hours / 3600), ((hours % 3600) / 60), ((hours % 3600) % 60) );
-      info_print(PSTR("Boot count: %d"), get_next_count());
+      info_print(PSTR("Uptime %02d %02d:%02d:%02d [%lu]"),
+          days, (hours / 3600), ((hours % 3600) / 60), ((hours % 3600) % 60), uptime );
+      info_print(PSTR("Boot count: %d / millis: [%lu]"), get_next_count(), millis());
       break;
 
     case 'o':
