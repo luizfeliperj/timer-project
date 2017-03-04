@@ -20,8 +20,8 @@ void watchdogger ( Task *task )
     tNow += SECS_PER_HOUR;
 
   lcd.setCursor (0,0);
-  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %01dd%02d:%02d"),
-    day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))), days, (hours / 3600), ((hours % 3600) / 60));
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %01ud%02u:%02u"),
+    day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))), days, (hours / 3600U), ((hours % 3600U) / 60U));
   lcd.print(buffer);
 
   lcd.setCursor (0,1);
@@ -134,8 +134,8 @@ void serialtask ( Task *t )
 
       info_print(PSTR("Compilado por Luiz Felipe Silva"));
       info_print(PSTR("Em " __TIMESTAMP__ ));
-      info_print(PSTR("Uptime %02d %02d:%02d:%02d [%lu]"),
-          days, (hours / 3600), ((hours % 3600) / 60), ((hours % 3600) % 60), uptime );
+      info_print(PSTR("Uptime %02u %02u:%02u:%02u [%lu]"),
+          days, (hours / 3600U), ((hours % 3600U) / 60U), ((hours % 3600U) % 60U), uptime );
       info_print(PSTR("Boot count: %d / millis: [%lu]"), get_next_count(), millis());
       break;
 
