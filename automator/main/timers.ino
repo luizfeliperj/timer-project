@@ -8,8 +8,8 @@ void watchdogger ( Task *task )
   char buffer[25];
   time_t tNow = now();
   uint32_t uptime = millis()/MSECS_PER_SEC;
-  uint16_t days = uptime/(24UL*60UL*60UL);
-  uint16_t hours = uptime%(24UL*60UL*60UL);
+  uint16_t days = uptime/(24UL*3600UL);
+  uint16_t hours = uptime%(24UL*3600UL);
 
   if (lastState == MODEON)
     digitalWrite (PIN_LED, HIGH);
