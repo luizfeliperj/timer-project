@@ -506,3 +506,10 @@ void serialSetTime(char *buffer, time_t tNow)
   debug_print(PSTR("Converted time is %ld"), tNow);
   info_print(PSTR("!!! Ok !!!"));
 }
+
+/* Calcula a quantidade de sram disponivel no arduino */
+int freeRam () {
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
