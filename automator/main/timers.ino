@@ -136,7 +136,7 @@ void serialtask ( Task *t )
       info_print(PSTR("Em " __TIMESTAMP__ ));
       info_print(PSTR("Uptime %02u %02lu:%02lu:%02lu"),
           days, (hours / 3600UL), ((hours % 3600UL) / 60UL), ((hours % 3600UL) % 60UL));
-      info_print(PSTR("Boot count: %d / sram free: [%d] / millis: [%lu]"), get_next_count(), freeRam(), millis());
+      info_print(PSTR("Boot count: %d / sram free: [%d]"), get_next_count(), freeRam());
       break;
 
     case 'o':
