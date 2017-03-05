@@ -8,8 +8,8 @@ void watchdogger ( Task *task )
   char buffer[25];
   time_t tNow = now();
   uint32_t uptime = millis()/MSECS_PER_SEC;
+  uint32_t hours = uptime%(24UL*3600UL);
   uint16_t days = uptime/(24UL*3600UL);
-  uint16_t hours = uptime%(24UL*3600UL);
 
   if (lastState == MODEON)
     digitalWrite (PIN_LED, HIGH);
@@ -20,8 +20,8 @@ void watchdogger ( Task *task )
     tNow += SECS_PER_HOUR;
 
   lcd.setCursor (0,0);
-  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %01ud%02u:%02u"),
-    day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))), days, (hours / 3600U), ((hours % 3600U) / 60U));
+  snprintf_P (buffer, sizeof(buffer)-1, PSTR("%02d/%02d/%02d %01ud%02lu:%02lu"),
+    day(tNow), month(tNow), tmYearToY2k(CalendarYrToTm(year(tNow))), days, (hours / 3600UL), ((hours % 3600UL) / 60UL));
   lcd.print(buffer);
 
   lcd.setCursor (0,1);
@@ -105,8 +105,8 @@ void tasklet ( Task *task )
 /* Le comandos enviados pela serial regularmente a cada segundo */
 void serialtask ( Task *t )
 {
-  uint32_t uptime;
-  uint16_t days, hours;
+  uint16_t days;
+  uint32_t uptime, hours;
   char buffer[DATETIMESTRINGLEN + 1];
   
   SerialTask *task = static_cast<SerialTask*>(t);
@@ -129,13 +129,13 @@ void serialtask ( Task *t )
     case 'a':
     case 'A':
       uptime = millis()/MSECS_PER_SEC;
-      days = uptime/(24UL*60UL*60UL);
-      hours = uptime%(24UL*60UL*60UL);
+      days = uptime/(24UL*3600UL);
+      hours = uptime%(24UL*3600UL);
 
       info_print(PSTR("Compilado por Luiz Felipe Silva"));
       info_print(PSTR("Em " __TIMESTAMP__ ));
-      info_print(PSTR("Uptime %02u %02u:%02u:%02u [%lu]"),
-          days, (hours / 3600U), ((hours % 3600U) / 60U), ((hours % 3600U) % 60U), uptime );
+      info_print(PSTR("Uptime %02u %02lu:%02lu:%02lu"),
+          days, (hours / 3600UL), ((hours % 3600UL) / 60UL), ((hours % 3600UL) % 60UL));
       info_print(PSTR("Boot count: %d /sram free: [%d] / millis: [%lu]"), get_next_count(), freeRam(), millis());
       break;
 
