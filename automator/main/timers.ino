@@ -105,6 +105,8 @@ void tasklet ( Task *task )
 /* Le comandos enviados pela serial regularmente a cada segundo */
 void serialtask ( Task *t )
 {
+  int *ptrint;
+  uint8_t light;
   uint16_t days;
   uint32_t uptime, hours;
   char buffer[DATETIMESTRINGLEN + 1];
@@ -149,6 +151,14 @@ void serialtask ( Task *t )
     case 'F':
       new Relay(PIN_RELAY2, PRESSBUTTONTIME);
       info_print(PSTR("Force MODEOFF"));
+      break;
+
+    case 't':
+    case 'T':
+      ptrint = *reinterpret_cast<int*>(reinterpret_cast<char*>(&lcd)+14);
+      light = (*ptrint & 0x1) ? LOW : HIGH;
+      info_print(PSTR("Toggle LCD backlight to [%d]"), light & 0xFFFF);
+      lcd.setBacklight( light );
       break;
 
     default:
