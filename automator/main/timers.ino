@@ -105,7 +105,7 @@ void tasklet ( Task *task )
 /* Le comandos enviados pela serial regularmente a cada segundo */
 void serialtask ( Task *t )
 {
-  int *ptrint;
+  int *pointer;
   uint8_t light;
   uint16_t days;
   uint32_t uptime, hours;
@@ -138,7 +138,7 @@ void serialtask ( Task *t )
       info_print(PSTR("Em " __TIMESTAMP__ ));
       info_print(PSTR("Uptime %02u %02lu:%02lu:%02lu"),
           days, (hours / 3600UL), ((hours % 3600UL) / 60UL), ((hours % 3600UL) % 60UL));
-      info_print(PSTR("Boot count: %d / sram free: [%d]"), get_next_count(), freeRam());
+      info_print(PSTR("Boot count: %d / sram free: [%d]"), boot_count, freeRam());
       break;
 
     case 'o':
@@ -155,10 +155,30 @@ void serialtask ( Task *t )
 
     case 't':
     case 'T':
-      ptrint = *reinterpret_cast<int*>(reinterpret_cast<char*>(&lcd)+14);
-      light = (*ptrint & 0x1) ? LOW : HIGH;
+      pointer = *reinterpret_cast<int**>(reinterpret_cast<char*>(&lcd)+14);
+      light = (*pointer & 0x1) ? LOW : HIGH;
       info_print(PSTR("Toggle LCD backlight to [%d]"), light & 0xFFFF);
       lcd.setBacklight( light );
+      break;
+
+    case 'r':
+    case 'R':
+      info_print(PSTR("Number of power cycles before reset counter: %d"), get_next_count());
+      for (int i=0; i < EEPROMCELLSTOUSE; i++)
+        EEPROM.write(i, 0);
+      break;
+
+    case 'h':
+    case 'H':
+      info_print(PSTR("Enabled options"));
+#ifdef ENABLE_DEBUG
+      info_print(PSTR("D: Toggle debuging messages on console"));
+#endif /* ENABLE_DEBUG */
+      info_print(PSTR("A: About this device"));
+      info_print(PSTR("O: Toggle relay ON sequence"));
+      info_print(PSTR("F: Toggle relay OFF sequence"));
+      info_print(PSTR("T: Toggle LCD backlight ON/OFF"));
+      info_print(PSTR("R: Reset EEPROM reset counter"));
       break;
 
     default:
